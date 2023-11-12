@@ -2,7 +2,7 @@
   "name": "frontend",
   "version": "1.0.0",
   "scripts": {
-    "build": "webpack",
+    "build": "webpack --mode=production --node-env=production",
     "start": "react-scripts start",
     "watch": "webpack --watch -d --output ./target/classes/static/built/bundle.js"
   },
