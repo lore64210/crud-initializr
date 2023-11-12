@@ -1,23 +1,125 @@
-.container {
-    display: flex !important;
-    flex-direction: column;
-    align-items: center;
+body {
+  margin: 0;
+  --primary-background-color: #6db33f;
+  --secondary-background-color: #80ea6e;
+  --text-color: #1b1f23;
+  color: var(--text-color) !important;
+  background-color: var(--primary-background-color);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.header-container {
+  position: sticky;
+  top: 0;
+  background-color: var(--primary-background-color);
+  z-index: 1000;
+  padding: 1em;
+}
+
+.header {
+  display: flex;
+  flex-direction: row;
+  width: 65vw;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.title {
+  margin: 1em 0 1em 0 !important;
+}
+
+.bussines-name-input-container {
+  margin-left: 0 !important;
+}
+
+.entity-forms-container {
+  display: flex;
+  flex-direction: row;
+  overflow-x: auto;
+  max-width: 100vw;
+  background-color: #80ea6e;
+  border: 1em solid #80ea6e;
 }
 
 .card {
-    width: 100%;
-    padding: 2em;
-    margin-top: 2em
+  min-width: 25vw;
+  padding: 2em;
+  margin: 1em;
+  background-color: var(--primary-background-color) !important;
+  color: var(--text-color) !important;
+}
+
+.attribute-card {
+  background-color: var(--secondary-background-color) !important;
+  margin-bottom: 1em;
 }
 
 .input {
-    width: 100%;
+  width: 100%;
 }
 
 .button-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  align-items: center;
+  height: 8em;
+}
+
+.MuiButtonBase-root {
+  color: var(--text-color) !important;
+}
+
+.form-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.name-input {
+  width: 80%;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--secondary-background-color);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--primary-background-color);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-color);
+}
+
+@media screen and (max-width: 600px) {
+  .header-container {
+    position: relative;
+  }
+
+  .header {
+    flex-direction: column;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    height: 30vh;
+  }
+
+  .title {
+    margin: 1em 0 1em 0 !important;
+  }
+
+  .bussines-name-input-container {
+    margin-left: 0 !important;
+  }
+
+  .entity-forms-container {
     display: flex;
     flex-direction: column;
-    justify-content: space-around;
-    align-items: center;
-    height: 8em;
+    overflow-x: hidden;
+  }
 }

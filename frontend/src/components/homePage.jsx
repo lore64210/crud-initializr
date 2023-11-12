@@ -37,32 +37,52 @@ function HomePage() {
   };
 
   return (
-    <Container maxWidth="sm" className="container">
-      <Typography variant="h4">Crud Initializr</Typography>
-      <TextField
-        className="input"
-        id="project-name"
-        label="Nombre del proyecto"
-        variant="outlined"
-        value={businessName}
-        onChange={({ target: { value } }) => setBusinessName(value)}
-      />
-      {entities.map((entity) => (
-        <EntityForm
-          key={entity.uuid}
-          entities={entities}
-          setEntities={setEntities}
-          uuid={entity.uuid}
-        />
-      ))}
-      <div className="container button-container">
-        <Button variant="contained" onClick={addNewDomainEntityForm}>
-          Agregar nueva entidad de dominio
-        </Button>
-        <Button variant="contained" onClick={submit}>
-          Crear Proyecto
-        </Button>
+    <>
+      <div className="header-container">
+        <div className="header">
+          <Typography variant="h4" className="title">
+            Spring CRUD Initializr
+          </Typography>
+          <Button
+            color="success"
+            variant="contained"
+            onClick={addNewDomainEntityForm}
+          >
+            Agregar nueva entidad de dominio
+          </Button>
+          <Button variant="contained" onClick={submit} color="success">
+            Crear Proyecto
+          </Button>
+        </div>
+        <p>
+          Proyecto personal de Lorenzo Lopez para crear aplicaciones de Spring
+        </p>
+        <Container maxWidth="sm" className="bussines-name-input-container">
+          <TextField
+            color="success"
+            className="input"
+            id="project-name"
+            label="Nombre del proyecto"
+            variant="outlined"
+            size="small"
+            value={businessName}
+            onChange={({ target: { value } }) => setBusinessName(value)}
+          />
+        </Container>
       </div>
+      {!!entities?.length && (
+        <div className="entity-forms-container">
+          {entities.map((entity) => (
+            <EntityForm
+              key={entity.uuid}
+              entities={entities}
+              setEntities={setEntities}
+              uuid={entity.uuid}
+            />
+          ))}
+        </div>
+      )}
+
       <Snackbar
         open={!!errorMessage.length}
         autoHideDuration={3000}
@@ -72,7 +92,7 @@ function HomePage() {
           <div>{errorMessage}</div>
         </Alert>
       </Snackbar>
-    </Container>
+    </>
   );
 }
 
