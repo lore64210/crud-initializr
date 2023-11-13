@@ -40,9 +40,16 @@ function HomePage() {
     <>
       <div className="header-container">
         <div className="header">
-          <Typography variant="h4" className="title">
-            Spring CRUD Initializr
-          </Typography>
+          <div className="logo-container">
+            <img
+              src="/imgs/spring-logo.png"
+              alt="spring-logo"
+              className="spring-logo"
+            />
+            <Typography variant="h4" className="title">
+              Spring CRUD Initializr
+            </Typography>
+          </div>
           <Button
             color="success"
             variant="contained"
@@ -55,9 +62,18 @@ function HomePage() {
           </Button>
         </div>
         <p>
-          Proyecto personal de Lorenzo Lopez para crear aplicaciones de Spring
+          Proyecto personal de Lorenzo Lopez para crear aplicaciones de
+          SpringBoot v2
         </p>
-        <Container maxWidth="sm" className="bussines-name-input-container">
+        <p>
+          WARNING: Segun las validaciones que se usen en los atributos de tipo
+          CUSTOM y CUSTOM_LIST, los test pueden fallar. Revisar los builders que
+          se usan al crear instancias genericas y reemplazar por lo que haga
+          falta
+        </p>
+      </div>
+      <div className="bussines-name-input-container">
+        <Container maxWidth="sm">
           <TextField
             color="success"
             className="input"

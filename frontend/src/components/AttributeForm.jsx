@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import {
-  Button,
   Card,
   Chip,
   IconButton,
@@ -26,7 +25,7 @@ const AttributeForm = ({
     setEntity({
       ...entity,
       attributes: entity.attributes.map((a) =>
-        a.uuid === uuid ? { ...attribute } : a,
+        a.uuid === uuid ? attribute : a,
       ),
     });
   }, [attribute]);

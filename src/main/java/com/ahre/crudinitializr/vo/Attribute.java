@@ -10,6 +10,8 @@ import java.util.List;
 @Data
 public class Attribute {
 
+    private String name;
+    private String customType;
     private TypeEnum type;
     private List<ValidationEnum> validations = new ArrayList<>();
 

@@ -81,17 +81,13 @@ public class DomainService {
         entity.getAttributes().forEach((key, value) -> {
             if (value.getType().name().equals("CUSTOM")) {
                 domainAttributes[0] += "\n\t@ManyToOne(cascade = CascadeType.ALL)\n";
-                domainAttributes[0] += "\tprivate " + StringUtils.capitalizeFirstCharacter(key) + " " + key + ";\n";
+                domainAttributes[0] += "\tprivate " + StringUtils.capitalizeFirstCharacter(value.getCustomType()) + " " + key + ";\n";
             } else if (value.getType().name().equals("CUSTOM_LIST")) {
                 domainAttributes[0] += "\n\t@OneToMany(cascade = CascadeType.ALL)\n";
                 domainAttributes[0] += "\t@JoinColumn(name = \"" + StringUtils.transformToSnakeCase(key) + "_id\")\n";
-                domainAttributes[0] += "\tprivate List<" + StringUtils.capitalizeFirstCharacter(key) + "> " + key + "s;\n";
-                imports[0] += importProjectBasePath + ".domain." + StringUtils.capitalizeFirstCharacter(key) + ";\n";
-                if (!imports[0].contains("import javax.persistence.*;")) {
-                    imports[0] += "import javax.persistence.*;\n";
-                }
-                if (!imports[0].contains("import java.util.ArrayList;\nimport java.util.List;\n")) {
-                    imports[0] += "import java.util.ArrayList;\nimport java.util.List;\n";
+                domainAttributes[0] += "\tprivate List<" + StringUtils.capitalizeFirstCharacter(value.getCustomType()) + "> " + key + "s;\n";
+                if (!imports[0].contains("import java.util.List;\n")) {
+                    imports[0] += "import java.util.List;\n";
                 }
             } else {
                 domainAttributes[0] += "\n\tprivate " + StringUtils.capitalizeFirstCharacter(value.getType().name().toLowerCase()) + " " + key + ";\n";
@@ -115,8 +111,8 @@ public class DomainService {
 
         entity.getAttributes().forEach((key, value) -> {
             if (value.getType().name().equals("CUSTOM")) {
-                saveExternalEntities[0] += "\n\t\t" + key + "Service.save("+ entity.getEntityName() + ".get" + StringUtils.capitalizeFirstCharacter(key) +"());\n";
-                externalEntitiesServices[0] += "\n\tprivate final " + StringUtils.capitalizeFirstCharacter(key) + "Service " + key + "Service;\n";
+                saveExternalEntities[0] += "\n\t\t" + value.getCustomType() + "Service.save("+ entity.getEntityName() + ".get" + StringUtils.capitalizeFirstCharacter(key) +"());\n";
+                externalEntitiesServices[0] += "\n\tprivate final " + StringUtils.capitalizeFirstCharacter(value.getCustomType()) + "Service " + value.getCustomType() + "Service;\n";
             }
 
             if (!value.getValidations().isEmpty()) {
@@ -183,16 +179,18 @@ public class DomainService {
             dropTables[0] += "DROP TABLE IF EXISTS "+ entityName +";\n";
             createTables[0] += "CREATE TABLE IF NOT EXISTS "+ entityName +"(\n\tid BIGINT AUTO_INCREMENT PRIMARY KEY,\n\tfecha_creacion DATETIME,\n\t";
             entity.getAttributes().forEach((key, value) -> {
-                String sqlKey = StringUtils.transformToSnakeCase(key);
                 if (value.getType().equals(TypeEnum.CUSTOM)) {
+                    String sqlKey = StringUtils.transformToSnakeCase(value.getCustomType());
                     createTables[0] += sqlKey + "_id BIGINT,\n\t";
-                    createTables[0] += "CONSTRAINT fk_" + sqlKey + " FOREIGN KEY ("+ sqlKey +"_id) REFERENCES " + sqlKey + "(id),\n\t";
+                    String entityReferenced = StringUtils.transformToSnakeCase(entity.getEntityName());
+                    createTables[0] += "CONSTRAINT fk_" + sqlKey + "_" + entityReferenced + " FOREIGN KEY ("+ sqlKey +"_id) REFERENCES " + sqlKey + "(id),\n\t";
                 } else if (!value.getType().equals(TypeEnum.CUSTOM_LIST)){
+                    String sqlKey = StringUtils.transformToSnakeCase(key);
                     createTables[0] += sqlKey + " " + value.getType().sqlType + ",\n\t";
                 }
             });
             domain.getEntities().forEach(e -> e.getAttributes().forEach((key, value) -> {
-                if (key.equals(entity.getEntityName()) && value.getType().equals(TypeEnum.CUSTOM_LIST)) {
+                if (value.getCustomType().equals(entity.getEntityName()) && value.getType().equals(TypeEnum.CUSTOM_LIST)) {
                     String foreignKey = StringUtils.transformToSnakeCase(key);
                     String entityReferenced = StringUtils.transformToSnakeCase(e.getEntityName());
                     createTables[0] += entityReferenced + "_id BIGINT,\n\t";
@@ -224,21 +222,25 @@ public class DomainService {
             String attribute = StringUtils.capitalizeFirstCharacter(key);
             String type = StringUtils.capitalizeFirstCharacter(value.getType().name());
             if (value.getType().equals(TypeEnum.CUSTOM)) {
-                type = attribute;
-                importString[0] += importProjectBasePath + ".domain." + attribute + ";\n";
+                type = StringUtils.capitalizeFirstCharacter(value.getCustomType());
+                String customImport = importProjectBasePath + ".domain." + type + ";\n";
+                if (!importString[0].contains(customImport)) {
+                    importString[0] += customImport;
+                }
             } else if (value.getType().equals(TypeEnum.CUSTOM_LIST)) {
-                type = "List<" + attribute + ">";
-                importString[0] += importProjectBasePath + ".domain." + attribute + ";\n";
+                String customImport = importProjectBasePath + ".domain." + StringUtils.capitalizeFirstCharacter(value.getCustomType()) + ";\n";
+                type = "List<" + StringUtils.capitalizeFirstCharacter(value.getCustomType()) + ">";
+                if (!importString[0].contains(customImport)) {
+                    importString[0] += customImport;
+                }
                 if (!importString[0].contains("List")) {
                     importString[0] += "import java.util.List;\n";
-
                 }
             }
             boolean isCustom = value.getType().equals(TypeEnum.CUSTOM_LIST) || value.getType().equals(TypeEnum.CUSTOM);
             String s = (value.getType().equals(TypeEnum.CUSTOM_LIST) ? "s" : "");
             genericMethods[0] += "public " + domainEntity + "Builder with" + attribute + s + "(" + (isCustom ? type : StringUtils.capitalizeFirstCharacter(type.toLowerCase())) + " val) {\n\t";
             genericMethods[0] += "instance.set" + attribute + s + "(val);\n\treturn this;\n}\n\n";
-
             genericBuild[0] += "builder.with" + attribute + s + "(null);\n\t";
         });
 

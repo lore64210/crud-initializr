@@ -1,20 +1,22 @@
-CREATE TABLE IF NOT EXISTS lore(
+CREATE TABLE IF NOT EXISTS entidad_uno(
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
 	fecha_creacion DATETIME,
-	nombre VARCHAR(255),
-	edad INT
+	atributo_uno VARCHAR(255)
 	);
 
-CREATE TABLE IF NOT EXISTS casa(
+CREATE TABLE IF NOT EXISTS entidad_dos(
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
 	fecha_creacion DATETIME,
-	nose_id BIGINT,
-	CONSTRAINT fk_nose FOREIGN KEY (nose_id) REFERENCES nose(id)
+	entidad_uno_id BIGINT,
+	CONSTRAINT fk_entidad_uno_entidad_dos FOREIGN KEY (entidad_uno_id) REFERENCES entidad_uno(id),
+	entidad_tres_id BIGINT,
+	CONSTRAINT fk_atributo_tres_entidad_tres FOREIGN KEY (entidad_tres_id) REFERENCES entidad_tres(id)
 	);
 
-CREATE TABLE IF NOT EXISTS asdasd(
+CREATE TABLE IF NOT EXISTS entidad_tres(
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
 	fecha_creacion DATETIME,
-	asaaaaaa BIGINT
+	entidad_uno_id BIGINT,
+	CONSTRAINT fk_entidad_uno_entidad_tres FOREIGN KEY (entidad_uno_id) REFERENCES entidad_uno(id)
 	);
 
