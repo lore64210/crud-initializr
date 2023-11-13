@@ -1,4 +1,5 @@
 var path = require("path");
+const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 
@@ -17,6 +18,10 @@ module.exports = {
   plugins: [
     new MiniCssExtractPlugin({
       filename: "../target/classes/static/built/css/app.css",
+    }),
+    new HtmlWebpackPlugin({
+      favicon: "./public/favicon.ico",
+      filename: "../target/classes/static/built/public/favicon.ico",
     }),
   ],
   module: {
