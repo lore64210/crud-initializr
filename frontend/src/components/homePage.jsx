@@ -41,11 +41,7 @@ function HomePage() {
       <div className="header-container">
         <div className="header">
           <div className="logo-container">
-            <img
-              src="/imgs/spring-logo.png"
-              alt="spring-logo"
-              className="spring-logo"
-            />
+            <img src="/favicon.ico" alt="spring-logo" className="spring-logo" />
             <Typography variant="h4" className="title">
               Spring CRUD Initializr
             </Typography>
