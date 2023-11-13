@@ -1,11 +1,9 @@
 package com.ahre.crudinitializr.utils;
 
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -19,8 +17,7 @@ public final class FileUtils {
 
     public String getContentFromFile(String path) {
         try {
-            File resource = new ClassPathResource(path, this.getClass().getClassLoader()).getFile();
-            return new String(Files.readAllBytes(resource.toPath()));
+            return new String(Files.readAllBytes(new File(path).toPath()));
         } catch (IOException e) {
             throw new IllegalArgumentException("Error obteniendo el archivo ", e);
         }
@@ -54,7 +51,7 @@ public final class FileUtils {
     }
 
     public Path createOutputFolder() throws IOException {
-        Path projectBase = new ClassPathResource("/static/projectBase", this.getClass().getClassLoader()).getFile().toPath();
+        Path projectBase = new File("src/main/resources/static/projectBase").toPath();
         Path projectPath = new File("src/main/resources/static/output").toPath();
         if (Files.exists(projectPath)) {
             deleteDirectory(projectPath);
