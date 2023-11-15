@@ -9,3 +9,19 @@ Al ejecutar el jar, o la aplicacion spring, se puede ver la web en localhost:800
 
 Para el despliegue, subi la imagen de docker a dockerhub y desplegue en render siguiendo estas instrucciones
 https://hostingtutorials.dev/blog/free-spring-boot-host-with-render
+
+
+Push to dockerhub and deploy on render:
+
+docker build -t spring-crud-initializr .  
+
+docker tag spring-crud-initializr lore64210/spring-crud-initializr
+
+docker push lore64210/spring-crud-initializr
+
+
+-> on render https://dashboard.render.com/web/srv-cl93rt76e7vc73ad41h0/logs
+
+manual deploy -> deploy latest reference
+
+
