@@ -103,7 +103,7 @@ public class DomainService {
     }
 
     private void writeServiceFile(Entity entity, Path project) throws IOException {
-        String baseServiceFileContent = fileUtils.getContentFromFile(staticPath + srcPath + "/service/serviceBase.java");
+        String baseServiceFileContent = fileUtils.getContentFromFile(staticPath + srcPath + "/service/ServiceBase.java");
         String newServiceFileContent = "";
         final String[] saveExternalEntities = {""};
         final String[] externalEntitiesServices = {""};

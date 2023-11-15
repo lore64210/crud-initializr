@@ -51,8 +51,14 @@ public final class FileUtils {
     }
 
     public Path createOutputFolder() throws IOException {
-        Path projectBase = new File("src/main/resources/static/projectBase").toPath();
-        Path projectPath = new File("src/main/resources/static/output").toPath();
+        //Path projectBase = new File("src/main/resources/static/projectBase").toPath();
+        //File projectFiles = new File("src/main/resources/static/output");
+        Path projectBase = new File("/tmp/projectBase").toPath();
+        File projectFiles = new File("/tmp/output");
+        if (!projectFiles.exists()) {
+            projectFiles.mkdirs();
+        }
+        Path projectPath = projectFiles.toPath();
         if (Files.exists(projectPath)) {
             deleteDirectory(projectPath);
         }
