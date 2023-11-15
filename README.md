@@ -20,8 +20,4 @@ docker tag spring-crud-initializr lore64210/spring-crud-initializr
 docker push lore64210/spring-crud-initializr
 
 
--> on render https://dashboard.render.com/web/srv-cl93rt76e7vc73ad41h0/logs
-
-manual deploy -> deploy latest reference
-
-
+Desplegado en google cloud run. No se necesitaa subir la imagen al artifact registry, se puede usar dockerhub directamente.
