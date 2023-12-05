@@ -4,16 +4,10 @@ import com.example.projectBase.tests.ApplicationTests;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.jdbc.JdbcTestUtils;
-
-import javax.transaction.Transactional;
-
+import jakarta.transaction.Transactional;
 import com.example.projectBase.builder.DOMAIN_DECLARATIONBuilder;
 import com.example.projectBase.service.SERVICE_DECLARATION;
 import com.example.projectBase.domain.DOMAIN_DECLARATION;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
 import static org.junit.jupiter.api.Assertions.*;
 import java.util.List;
 
