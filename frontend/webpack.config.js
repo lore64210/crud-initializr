@@ -1,7 +1,7 @@
 var path = require("path");
-const HtmlWebpackPlugin = require("html-webpack-plugin");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
+const CopyPlugin = require("copy-webpack-plugin");
 
 module.exports = {
   resolve: {
@@ -19,9 +19,13 @@ module.exports = {
     new MiniCssExtractPlugin({
       filename: "../target/classes/static/built/css/app.css",
     }),
-    new HtmlWebpackPlugin({
-      favicon: "./public/favicon.ico",
-      filename: "../target/classes/static/built/public/favicon.ico",
+    new CopyPlugin({
+      patterns: [
+        {
+          from: "public/favicon.ico",
+          to: "../target/classes/static/favicon.ico",
+        },
+      ],
     }),
   ],
   module: {
