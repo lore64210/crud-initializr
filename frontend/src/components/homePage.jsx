@@ -9,7 +9,9 @@ import {
   Button,
   TextField,
   Typography,
+  IconButton,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 
 import "../css/app.css";
 
@@ -18,7 +20,11 @@ const emptyDomainEntity = {
   attributes: [],
 };
 
+const warningMessage =
+  "WARNING: Segun las validaciones que se usen en los atributos de tipo CUSTOM y CUSTOM_LIST, los test pueden fallar. Revisar los builders que se usan al crear instancias genericas y reemplazar por lo que haga falta";
+
 function HomePage() {
+  const [projectDownloaded, setProjectDownloaded] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [entities, setEntities] = useState([
@@ -26,18 +32,23 @@ function HomePage() {
   ]);
 
   const addNewDomainEntityForm = () => {
-    setEntities([...entities, { ...emptyDomainEntity, uuid: uuid() }]);
+    setEntities([{ ...emptyDomainEntity, uuid: uuid() }, ...entities]);
   };
 
   const submit = async () => {
-    const error = await service.createProject({ businessName, entities });
+    const error = await service.createProject({
+      businessName,
+      entities,
+    });
     if (error) {
       setErrorMessage(error);
+    } else {
+      setProjectDownloaded(true);
     }
   };
 
   return (
-    <>
+    <div className="main">
       <div className="header-container">
         <div className="header">
           <div className="logo-container">
@@ -46,27 +57,12 @@ function HomePage() {
               Spring CRUD Initializr
             </Typography>
           </div>
-          <Button
-            color="success"
-            variant="contained"
-            onClick={addNewDomainEntityForm}
-          >
-            Agregar nueva entidad de dominio
-          </Button>
-          <Button variant="contained" onClick={submit} color="success">
-            Crear Proyecto
-          </Button>
         </div>
         <p>
           Proyecto personal de Lorenzo Lopez para crear aplicaciones de
-          SpringBoot v2
+          SpringBoot v3.2.0
         </p>
-        <p>
-          WARNING: Segun las validaciones que se usen en los atributos de tipo
-          CUSTOM y CUSTOM_LIST, los test pueden fallar. Revisar los builders que
-          se usan al crear instancias genericas y reemplazar por lo que haga
-          falta
-        </p>
+        <p></p>
       </div>
       <div className="bussines-name-input-container">
         <Container maxWidth="sm">
@@ -82,19 +78,31 @@ function HomePage() {
           />
         </Container>
       </div>
-      {!!entities?.length && (
-        <div className="entity-forms-container">
-          {entities.map((entity) => (
-            <EntityForm
-              key={entity.uuid}
-              entities={entities}
-              setEntities={setEntities}
-              uuid={entity.uuid}
-            />
-          ))}
-        </div>
-      )}
-
+      <div className="entity-forms-container">
+        <IconButton
+          aria-label="add"
+          className="add-entity-button"
+          onClick={addNewDomainEntityForm}
+        >
+          <AddIcon />
+        </IconButton>
+        {entities?.map((entity) => (
+          <EntityForm
+            key={entity.uuid}
+            entities={entities}
+            setEntities={setEntities}
+            uuid={entity.uuid}
+          />
+        ))}
+      </div>
+      <Button
+        className="create-project-button"
+        variant="contained"
+        onClick={submit}
+        color="secondary"
+      >
+        Crear Proyecto
+      </Button>
       <Snackbar
         open={!!errorMessage.length}
         autoHideDuration={3000}
@@ -104,7 +112,16 @@ function HomePage() {
           <div>{errorMessage}</div>
         </Alert>
       </Snackbar>
-    </>
+      <Snackbar
+        open={projectDownloaded}
+        autoHideDuration={10000}
+        onClose={() => setProjectDownloaded(false)}
+      >
+        <Alert severity="warning" sx={{ width: "95%" }}>
+          <div>{warningMessage}</div>
+        </Alert>
+      </Snackbar>
+    </div>
   );
 }
 
