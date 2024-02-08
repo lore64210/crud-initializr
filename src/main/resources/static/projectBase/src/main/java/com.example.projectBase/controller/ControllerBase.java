@@ -12,7 +12,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ENTITY_DECLARATIONController extends AdviceController {
 
-    SERVICE_DECLARATION
+    private final SERVICE_DECLARATION
 
     @GetMapping
     public ResponseEntity<List<ENTITY_DECLARATION>> findAll() {
