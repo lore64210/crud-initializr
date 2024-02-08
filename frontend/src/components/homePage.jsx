@@ -60,7 +60,7 @@ function HomePage() {
         </div>
         <p>
           Proyecto personal de Lorenzo Lopez para crear aplicaciones de
-          SpringBoot v3.2.0.0.0.0
+          SpringBoot v3.2.0.0
         </p>
         <p></p>
       </div>
