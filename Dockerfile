@@ -3,4 +3,4 @@ EXPOSE 8080
 ADD src/main/resources/static /tmp
 VOLUME /tmp
 COPY target/*.jar app.jar
-ENTRYPOINT ["java","-jar","/crud-initializr.jar"]
+ENTRYPOINT ["java","-jar","/app.jar"]
