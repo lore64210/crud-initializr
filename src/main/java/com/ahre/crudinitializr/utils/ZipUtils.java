@@ -1,36 +1,36 @@
 package com.ahre.crudinitializr.utils;
 
-import org.apache.tomcat.util.http.fileupload.IOUtils;
-
-import java.io.*;
-import java.util.Objects;
+import java.io.File;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
 public final class ZipUtils {
 
-    public static void zipFolder(final File folder, final File zipFile) throws IOException {
-        zipFolder(folder, new FileOutputStream(zipFile));
+    private ZipUtils() {
     }
 
-    public static void zipFolder(final File folder, final OutputStream outputStream) throws IOException {
+    public static void zipFolder(Path folder, OutputStream outputStream) throws IOException {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(outputStream)) {
-            processFolder(folder, zipOutputStream, folder.getPath().length() + 1);
+            addEntries(folder, folder, zipOutputStream);
         }
     }
 
-    public static void processFolder(final File folder, final ZipOutputStream zipOutputStream, final int prefixLength)
-            throws IOException {
-        for (final File file : Objects.requireNonNull(folder.listFiles())) {
-            if (file.isFile()) {
-                final ZipEntry zipEntry = new ZipEntry(file.getPath().substring(prefixLength));
-                zipOutputStream.putNextEntry(zipEntry);
-                try (FileInputStream inputStream = new FileInputStream(file)) {
-                    IOUtils.copy(inputStream, zipOutputStream);
+    private static void addEntries(Path root, Path folder, ZipOutputStream zipOutputStream) throws IOException {
+        try (Stream<Path> entries = Files.list(folder)) {
+            for (Path entry : entries.sorted().toList()) {
+                if (Files.isDirectory(entry)) {
+                    addEntries(root, entry, zipOutputStream);
+                    continue;
                 }
+                String entryName = root.relativize(entry).toString().replace(File.separatorChar, '/');
+                zipOutputStream.putNextEntry(new ZipEntry(entryName));
+                Files.copy(entry, zipOutputStream);
                 zipOutputStream.closeEntry();
-            } else if (file.isDirectory()) {
-                processFolder(file, zipOutputStream, prefixLength);
             }
         }
     }

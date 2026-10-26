@@ -10,10 +10,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.servlet.http.HttpServletResponse;
-import java.io.*;
+import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.util.zip.ZipOutputStream;
 
 @RestController
 @RequestMapping("/api/domain")
@@ -27,11 +26,13 @@ public class DomainController {
     public void processDomain(@RequestBody Domain domain, HttpServletResponse response) throws IOException {
         Path file = domainService.processDomain(domain);
 
-        response.setHeader("Content-Disposition", "attachment;filename=download.zip");
-        response.setStatus(HttpServletResponse.SC_OK);
-
-        ZipOutputStream zippedOut = new ZipOutputStream(response.getOutputStream());
-        ZipUtils.processFolder(file.toFile(), zippedOut, file.toFile().getPath().length() + 1);
-        zippedOut.finish();
+        try {
+            response.setContentType("application/zip");
+            response.setHeader("Content-Disposition", "attachment;filename=project.zip");
+            response.setStatus(HttpServletResponse.SC_OK);
+            ZipUtils.zipFolder(file, response.getOutputStream());
+        } finally {
+            fileUtils.deleteQuietly(file);
+        }
     }
 }

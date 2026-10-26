@@ -1,0 +1,30 @@
+# PROJECT_NAME
+
+Proyecto Spring Boot 4.1.2 con ABM generado por Spring CRUD Initializr.
+
+## Base de datos
+
+- Motor: **DATABASE_LABEL**
+- URL por defecto: `DATABASE_URL`
+- Usuario: `DATABASE_USERNAME`
+- Password: `DATABASE_PASSWORD`
+
+La aplicación lee la configuración de las variables de entorno `DB_URL`, `DB_USER` y `DB_PASSWORD`. Si no están definidas, usa los valores por defecto de arriba.
+
+DATABASE_RUN_INSTRUCTIONS
+
+## Ejecutar
+
+```bash
+mvn spring-boot:run
+```
+
+La API queda disponible en `http://localhost:8080/api/...`.
+
+## Tests
+
+Los tests usan una base H2 en memoria, independientemente del motor elegido para ejecutar la aplicación:
+
+```bash
+mvn test
+```

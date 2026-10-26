@@ -2,8 +2,21 @@ package com.ahre.crudinitializr.utils;
 
 public final class StringUtils {
 
+    private StringUtils() {
+    }
+
     public static String capitalizeFirstCharacter(String value) {
-        return value.substring(0,1).toUpperCase() + value.substring(1);
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        return value.substring(0, 1).toUpperCase() + value.substring(1);
+    }
+
+    public static String lowerFirstCharacter(String value) {
+        if (value == null || value.isEmpty()) {
+            return value;
+        }
+        return value.substring(0, 1).toLowerCase() + value.substring(1);
     }
 
     public static String transformToSnakeCase(String str) {
@@ -13,12 +26,22 @@ public final class StringUtils {
         return str;
     }
 
-    public static String replaceLast(String string, String substring, String replacement) {
-        int index = string.lastIndexOf(substring);
-        if (index == -1)
-            return string;
-        return string.substring(0, index) + replacement
-                + string.substring(index+substring.length());
+    public static String toArtifactId(String value) {
+        String artifactId = value == null ? "" : value.trim().toLowerCase()
+                .replaceAll("[^a-z0-9._-]+", "-")
+                .replaceAll("-{2,}", "-")
+                .replaceAll("^-+|-+$", "");
+        return artifactId.isEmpty() ? "project-base" : artifactId;
     }
 
+    public static String escapeXml(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
+    }
 }

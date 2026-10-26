@@ -1,21 +1,8 @@
-import React from 'react';
-import HomePage from './components/homePage';
-import ReactDOM from 'react-dom/client';
-import {
-    BrowserRouter,
-    Routes,
-    Route,
-} from 'react-router-dom';
-import './css/app.css';
+import React from "react";
+import ReactDOM from "react-dom/client";
+import HomePage from "./components/homePage";
+import "./css/app.css";
 
-const root = ReactDOM.createRoot(
-    document.getElementById('root')
-);
+const root = ReactDOM.createRoot(document.getElementById("root"));
 
-root.render(
-    <BrowserRouter>
-        <Routes>
-            <Route path='/' element={<HomePage />} />
-        </Routes>
-    </BrowserRouter>
-);
+root.render(<HomePage />);
