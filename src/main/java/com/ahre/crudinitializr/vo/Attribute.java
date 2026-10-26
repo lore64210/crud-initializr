@@ -4,6 +4,7 @@ import com.ahre.crudinitializr.enums.TypeEnum;
 import com.ahre.crudinitializr.enums.ValidationEnum;
 import lombok.Data;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,5 +15,7 @@ public class Attribute {
     private String customType;
     private TypeEnum type;
     private List<ValidationEnum> validations = new ArrayList<>();
+    private BigDecimal minValue;
+    private BigDecimal maxValue;
 
 }

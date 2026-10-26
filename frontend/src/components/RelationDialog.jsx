@@ -18,9 +18,11 @@ import "../css/app.css";
 const RelationDialog = ({
   open,
   mode,
+  database = "POSTGRESQL",
   sourceName,
   targetName,
   targetExists,
+  targetEmbedded,
   initialName,
   initialType,
   otherNames,
@@ -44,6 +46,19 @@ const RelationDialog = ({
     setConfirmDelete(false);
   }, [open, initialName, initialType]);
 
+  const isMongo = database === "MONGODB";
+  const targetInvalid = isMongo && !targetEmbedded;
+  const relationTypes = isMongo
+    ? [
+        { value: "COMPOSITION", label: "1:1 · Embebido" },
+        { value: "COMPOSITION_LIST", label: "1:N · Lista" },
+      ]
+    : [
+        { value: "CUSTOM", label: "N:1 · Muchos a uno" },
+        { value: "CUSTOM_LIST", label: "1:N · Uno a muchos" },
+        { value: "CUSTOM_ONE_TO_ONE", label: "1:1 · Uno a uno" },
+        { value: "CUSTOM_MANY_TO_MANY", label: "N:M · Muchos a muchos" },
+      ];
   const normalize = (value) => formatStringToCamelCase(value).toLowerCase();
 
   const changeType = (nextType) => {
@@ -57,6 +72,11 @@ const RelationDialog = ({
   };
 
   const save = () => {
+    if (targetInvalid) {
+      setError("La entidad destino debe ser un documento embebido");
+      return;
+    }
+
     const trimmed = name.trim();
     const normalized = formatStringToCamelCase(trimmed);
 
@@ -141,7 +161,7 @@ const RelationDialog = ({
             />
 
             <Typography className="relation-dialog__label">
-              Tipo de relación
+              {isMongo ? "Tipo de composición" : "Tipo de relación"}
             </Typography>
             <ToggleButtonGroup
               exclusive
@@ -151,11 +171,22 @@ const RelationDialog = ({
               onChange={(_event, value) => changeType(value)}
               className="relation-dialog__toggle"
             >
-              <ToggleButton value="CUSTOM">Muchos a uno · N:1</ToggleButton>
-              <ToggleButton value="CUSTOM_LIST">
-                Uno a muchos · 1:N
-              </ToggleButton>
+              {relationTypes.map((relationType) => (
+                <ToggleButton
+                  key={relationType.value}
+                  value={relationType.value}
+                >
+                  {relationType.label}
+                </ToggleButton>
+              ))}
             </ToggleButtonGroup>
+
+            {targetInvalid && (
+              <Alert severity="warning" variant="outlined" sx={{ mt: 2 }}>
+                La entidad «{targetName}» debe estar marcada como documento
+                embebido para usarla en una composición.
+              </Alert>
+            )}
 
             {!targetExists && (
               <Alert severity="warning" variant="outlined" sx={{ mt: 2 }}>
@@ -198,8 +229,17 @@ const RelationDialog = ({
             <Button color="inherit" onClick={onClose}>
               Cancelar
             </Button>
-            <Button color="success" variant="contained" onClick={save}>
-              {mode === "edit" ? "Guardar" : "Crear relación"}
+            <Button
+              color="success"
+              variant="contained"
+              onClick={save}
+              disabled={targetInvalid}
+            >
+              {mode === "edit"
+                ? "Guardar"
+                : isMongo
+                  ? "Crear composición"
+                  : "Crear relación"}
             </Button>
           </>
         )}

@@ -17,16 +17,14 @@
 		<java.version>17</java.version>
 	</properties>
 	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-data-jpa</artifactId>
-		</dependency>
+PERSISTENCE_DEPENDENCY
 		<!-- Base de datos: DATABASE_LABEL -->
 DATABASE_DEPENDENCY
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
+API_DEPENDENCY
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -45,11 +43,8 @@ DATABASE_DEPENDENCY
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-TEST_H2_DEPENDENCY
-		<dependency>
-			<groupId>org.springframework.data</groupId>
-			<artifactId>spring-data-rest-hal-explorer</artifactId>
-		</dependency>
+TEST_SUPPORT_DEPENDENCY
+REST_EXPLORER_DEPENDENCY
 	</dependencies>
 
 	<build>

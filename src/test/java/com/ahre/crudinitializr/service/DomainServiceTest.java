@@ -1,5 +1,6 @@
 package com.ahre.crudinitializr.service;
 
+import com.ahre.crudinitializr.enums.ApiEnum;
 import com.ahre.crudinitializr.enums.DatabaseEnum;
 import com.ahre.crudinitializr.enums.TypeEnum;
 import com.ahre.crudinitializr.enums.ValidationEnum;
@@ -11,6 +12,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -203,6 +205,204 @@ class DomainServiceTest {
     }
 
     @Test
+    void processDomain_withNewScalarTypes_generatesJavaTypesSchemaAndValidations() throws IOException {
+        Domain domain = validDomain();
+        domain.setApiType(ApiEnum.GRAPHQL);
+        Entity persona = domain.getEntities().get(0);
+
+        persona.getAttributes().put("fechaNacimiento",
+                attribute(TypeEnum.DATE, null, ValidationEnum.PAST));
+        persona.getAttributes().put("creadoEn",
+                attribute(TypeEnum.DATETIME, null, ValidationEnum.FUTURE_OR_PRESENT));
+        persona.getAttributes().put("horaInicio",
+                attribute(TypeEnum.TIME, null, ValidationEnum.PAST));
+        Attribute precio = attribute(TypeEnum.DECIMAL, null,
+                ValidationEnum.POSITIVE, ValidationEnum.MIN, ValidationEnum.MAX);
+        precio.setMinValue(new BigDecimal("1.5"));
+        precio.setMaxValue(new BigDecimal("999.99"));
+        persona.getAttributes().put("precio", precio);
+        persona.getAttributes().put("peso",
+                attribute(TypeEnum.DOUBLE, null, ValidationEnum.POSITIVE));
+        persona.getAttributes().put("codigo",
+                attribute(TypeEnum.UUID, null, ValidationEnum.NOT_NULL));
+
+        Path project = track(domainService.processDomain(domain));
+
+        String personaFile = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Persona.java"));
+        assertTrue(personaFile.contains("import java.time.LocalDate;"));
+        assertTrue(personaFile.contains("import java.time.LocalDateTime;"));
+        assertTrue(personaFile.contains("import java.time.LocalTime;"));
+        assertTrue(personaFile.contains("import java.math.BigDecimal;"));
+        assertTrue(personaFile.contains("import java.util.UUID;"));
+        assertTrue(personaFile.contains("private LocalDate fechaNacimiento;"));
+        assertTrue(personaFile.contains("private LocalDateTime creadoEn;"));
+        assertTrue(personaFile.contains("private LocalTime horaInicio;"));
+        assertTrue(personaFile.contains("private BigDecimal precio;"));
+        assertTrue(personaFile.contains("private Double peso;"));
+        assertTrue(personaFile.contains("private UUID codigo;"));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PersonaService.java"));
+        assertTrue(service.contains(
+                "Assert.isTrue(persona.getFechaNacimiento() == null || persona.getFechaNacimiento().isBefore(java.time.LocalDate.now()), \"fechaNacimiento must be in the past\");"));
+        assertTrue(service.contains(
+                "Assert.isTrue(persona.getCreadoEn() == null || !persona.getCreadoEn().isBefore(java.time.LocalDateTime.now()), \"creadoEn must be in the future or present\");"));
+        assertTrue(service.contains(
+                "Assert.isTrue(persona.getHoraInicio() == null || persona.getHoraInicio().isBefore(java.time.LocalTime.now()), \"horaInicio must be in the past\");"));
+        assertTrue(service.contains(
+                "Assert.isTrue(persona.getPrecio() == null || persona.getPrecio().compareTo(java.math.BigDecimal.ZERO) > 0, \"precio must be positive\");"));
+        assertTrue(service.contains(
+                "Assert.isTrue(persona.getPrecio() == null || persona.getPrecio().compareTo(new java.math.BigDecimal(\"1.5\")) >= 0, \"precio must be greater than or equal to 1.5\");"));
+        assertTrue(service.contains(
+                "Assert.isTrue(persona.getPrecio() == null || persona.getPrecio().compareTo(new java.math.BigDecimal(\"999.99\")) <= 0, \"precio must be less than or equal to 999.99\");"));
+        assertTrue(service.contains(
+                "Assert.isTrue(persona.getPeso() == null || persona.getPeso() > 0, \"peso must be positive\");"));
+        assertTrue(service.contains(
+                "Assert.notNull(persona.getCodigo(), \"codigo can not be null\");"));
+
+        String builder = Files.readString(project.resolve(
+                "src/test/java/com/example/projectBase/builder/PersonaBuilder.java"));
+        assertTrue(builder.contains("withFechaNacimiento(LocalDate val)"));
+        assertTrue(builder.contains("builder.withFechaNacimiento(LocalDate.now().minusDays(1));"));
+        assertTrue(builder.contains("builder.withCreadoEn(LocalDateTime.now().plusDays(1));"));
+        assertTrue(builder.contains("builder.withHoraInicio(LocalTime.MIN);"));
+        assertTrue(builder.contains("builder.withPrecio(new BigDecimal(\"1.5\"));"));
+        assertTrue(builder.contains("builder.withPeso(1.0);"));
+        assertTrue(builder.contains(
+                "builder.withCodigo(UUID.fromString(\"00000000-0000-0000-0000-000000000001\"));"));
+
+        String schema = Files.readString(project.resolve("doc/scripts/schema.sql"));
+        assertTrue(schema.contains("\"fecha_nacimiento\" DATE"));
+        assertTrue(schema.contains("\"creado_en\" TIMESTAMP"));
+        assertTrue(schema.contains("\"hora_inicio\" TIME"));
+        assertTrue(schema.contains("\"precio\" DECIMAL(19,4)"));
+        assertTrue(schema.contains("\"peso\" DOUBLE PRECISION"));
+        assertTrue(schema.contains("\"codigo\" UUID"));
+
+        String graphqlSchema = Files.readString(project.resolve(
+                "src/main/resources/graphql/schema.graphqls"));
+        assertTrue(graphqlSchema.contains("fechaCreacion: DateTime"));
+        assertTrue(graphqlSchema.contains("fechaNacimiento: Date"));
+        assertTrue(graphqlSchema.contains("creadoEn: DateTime"));
+        assertTrue(graphqlSchema.contains("horaInicio: Time"));
+        assertTrue(graphqlSchema.contains("precio: BigDecimal"));
+        assertTrue(graphqlSchema.contains("peso: Float"));
+        assertTrue(graphqlSchema.contains("codigo: UUID"));
+    }
+
+    @Test
+    void processDomain_withNewScalarTypes_usesDialectSpecificSqlTypes() throws IOException {
+        Domain domain = validDomain();
+        domain.setDatabase(DatabaseEnum.MYSQL);
+        Entity persona = domain.getEntities().get(0);
+        persona.getAttributes().put("fechaNacimiento", attribute(TypeEnum.DATE, null));
+        persona.getAttributes().put("creadoEn", attribute(TypeEnum.DATETIME, null));
+        persona.getAttributes().put("horaInicio", attribute(TypeEnum.TIME, null));
+        persona.getAttributes().put("precio", attribute(TypeEnum.DECIMAL, null));
+        persona.getAttributes().put("peso", attribute(TypeEnum.DOUBLE, null));
+        persona.getAttributes().put("codigo", attribute(TypeEnum.UUID, null));
+
+        Path mysqlProject = track(domainService.processDomain(domain));
+        String mysqlSchema = Files.readString(mysqlProject.resolve("doc/scripts/schema.sql"));
+        assertTrue(mysqlSchema.contains("`fecha_nacimiento` DATE"));
+        assertTrue(mysqlSchema.contains("`creado_en` DATETIME"));
+        assertTrue(mysqlSchema.contains("`hora_inicio` TIME"));
+        assertTrue(mysqlSchema.contains("`precio` DECIMAL(19,4)"));
+        assertTrue(mysqlSchema.contains("`peso` DOUBLE"));
+        assertTrue(mysqlSchema.contains("`codigo` CHAR(36)"));
+
+        Domain sqliteDomain = validDomain();
+        sqliteDomain.setDatabase(DatabaseEnum.SQLITE);
+        Entity sqlitePersona = sqliteDomain.getEntities().get(0);
+        sqlitePersona.getAttributes().put("creadoEn", attribute(TypeEnum.DATETIME, null));
+        sqlitePersona.getAttributes().put("peso", attribute(TypeEnum.DOUBLE, null));
+        sqlitePersona.getAttributes().put("codigo", attribute(TypeEnum.UUID, null));
+
+        Path sqliteProject = track(domainService.processDomain(sqliteDomain));
+        String sqliteSchema = Files.readString(sqliteProject.resolve("doc/scripts/schema.sql"));
+        assertTrue(sqliteSchema.contains("\"creado_en\" TIMESTAMP"));
+        assertTrue(sqliteSchema.contains("\"peso\" REAL"));
+        assertTrue(sqliteSchema.contains("\"codigo\" TEXT"));
+    }
+
+    @Test
+    void processDomain_withTemporalValidationOnString_throwsException() {
+        Domain domain = validDomain();
+        domain.getEntities().get(0).getAttributes().put("nombre",
+                attribute(TypeEnum.STRING, null, ValidationEnum.PAST));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("no es válida"));
+    }
+
+    @Test
+    void processDomain_withNumericValidationOnDate_throwsException() {
+        Domain domain = validDomain();
+        domain.getEntities().get(0).getAttributes().put("fechaNacimiento",
+                attribute(TypeEnum.DATE, null, ValidationEnum.POSITIVE));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("no es válida"));
+    }
+
+    @Test
+    void processDomain_withMinValidationWithoutValue_throwsException() {
+        Domain domain = validDomain();
+        domain.getEntities().get(0).getAttributes().put("edad",
+                attribute(TypeEnum.INTEGER, null, ValidationEnum.MIN));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("valor mínimo"));
+    }
+
+    @Test
+    void processDomain_withFractionalIntegerMin_throwsException() {
+        Domain domain = validDomain();
+        Attribute edad = attribute(TypeEnum.INTEGER, null, ValidationEnum.MIN);
+        edad.setMinValue(new BigDecimal("1.5"));
+        domain.getEntities().get(0).getAttributes().put("edad", edad);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("número entero"));
+    }
+
+    @Test
+    void processDomain_withMinGreaterThanMax_throwsException() {
+        Domain domain = validDomain();
+        Attribute edad = attribute(TypeEnum.INTEGER, null, ValidationEnum.MIN, ValidationEnum.MAX);
+        edad.setMinValue(new BigDecimal("10"));
+        edad.setMaxValue(new BigDecimal("5"));
+        domain.getEntities().get(0).getAttributes().put("edad", edad);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("no puede ser mayor"));
+    }
+
+    @Test
+    void processDomain_withContradictoryNumericValidations_throwsException() {
+        Domain domain = validDomain();
+        Attribute edad = attribute(TypeEnum.INTEGER, null,
+                ValidationEnum.POSITIVE, ValidationEnum.NEGATIVE);
+        domain.getEntities().get(0).getAttributes().put("edad", edad);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("positivo y negativo"));
+    }
+
+    @Test
     void processDomain_withReservedColumnAttribute_throwsException() {
         Domain domain = validDomain();
         domain.getEntities().get(0).getAttributes().put("id", attribute(TypeEnum.INTEGER, null));
@@ -356,7 +556,7 @@ class DomainServiceTest {
         assertFalse(pom.contains("mariadb-java-client"));
         assertFalse(pom.contains("hsqldb"));
         assertFalse(pom.contains("DATABASE_DEPENDENCY"));
-        assertFalse(pom.contains("TEST_H2_DEPENDENCY"));
+        assertFalse(pom.contains("TEST_SUPPORT_DEPENDENCY"));
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("# Base de datos: PostgreSQL"));
@@ -510,6 +710,457 @@ class DomainServiceTest {
         assertTrue(readme.contains("foreign_keys=on"));
     }
 
+    @Test
+    void processDomain_withMongodb_generatesDocumentProjectWithTestcontainers() throws IOException {
+        Domain domain = flatDomain();
+        domain.setDatabase(DatabaseEnum.MONGODB);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String pom = Files.readString(project.resolve("pom.xml"));
+        assertTrue(pom.contains("<artifactId>spring-boot-starter-data-mongodb</artifactId>"));
+        assertFalse(pom.contains("spring-boot-starter-data-jpa"));
+        assertFalse(pom.contains("mysql-connector-j"));
+        assertFalse(pom.contains("mariadb-java-client"));
+        assertFalse(pom.contains("org.postgresql"));
+        assertFalse(pom.contains("<artifactId>h2</artifactId>"));
+        assertTrue(pom.contains("<artifactId>spring-boot-testcontainers</artifactId>"));
+        assertTrue(pom.contains("<artifactId>testcontainers-mongodb</artifactId>"));
+        assertTrue(pom.contains("<artifactId>testcontainers-junit-jupiter</artifactId>"));
+        assertFalse(pom.contains("PERSISTENCE_DEPENDENCY"));
+        assertFalse(pom.contains("DATABASE_DEPENDENCY"));
+        assertFalse(pom.contains("TEST_SUPPORT_DEPENDENCY"));
+
+        String application = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/ProjectBaseApplication.java"));
+        assertTrue(application.contains("@EnableMongoAuditing"));
+
+        String persona = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Persona.java"));
+        assertTrue(persona.contains("@Document(collection = \"persona\")"));
+        assertTrue(persona.contains("@Id"));
+        assertTrue(persona.contains("private String id;"));
+        assertTrue(persona.contains("@CreatedDate"));
+        assertTrue(persona.contains("private LocalDateTime fechaCreacion;"));
+        assertFalse(persona.contains("@Entity"));
+        assertFalse(persona.contains("@Table"));
+        assertFalse(persona.contains("@ManyToOne"));
+
+        String repository = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/repository/PersonaRepository.java"));
+        assertTrue(repository.contains("MongoRepository<Persona, String>"));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PersonaService.java"));
+        assertTrue(service.contains("findById(String id)"));
+        assertTrue(service.contains("delete(String id)"));
+        assertFalse(service.contains("CascadeType"));
+        assertFalse(service.contains("SAVE_EXTERNAL_ENTITIES"));
+
+        String controller = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaController.java"));
+        assertTrue(controller.contains("@PathVariable String id"));
+
+        String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
+        assertTrue(properties.contains("# Base de datos: MongoDB"));
+        assertTrue(properties.contains("${MONGODB_URI:mongodb://localhost:27017/test}"));
+        assertTrue(properties.contains("spring.data.mongodb.auto-index-creation=true"));
+        assertFalse(properties.contains("spring.jpa"));
+        assertFalse(properties.contains("spring.datasource"));
+
+        String testBase = Files.readString(project.resolve(
+                "src/test/java/com/example/projectBase/tests/ApplicationTests.java"));
+        assertTrue(testBase.contains("@Testcontainers"));
+        assertTrue(testBase.contains("MongoDBContainer"));
+        assertTrue(testBase.contains("mongo:7"));
+        assertTrue(testBase.contains("spring.data.mongodb.uri"));
+
+        String serviceTest = Files.readString(project.resolve(
+                "src/test/java/com/example/projectBase/tests/service/PersonaServiceTest.java"));
+        assertTrue(serviceTest.contains("extends ApplicationTests"));
+        assertTrue(serviceTest.contains("personaService.findById(null)"));
+        assertFalse(serviceTest.contains("EntityManager"));
+        assertFalse(serviceTest.contains("@Transactional"));
+
+        assertFalse(Files.exists(project.resolve("doc/scripts/schema.sql")));
+        assertFalse(Files.exists(project.resolve("src/test/resources/schema.sql")));
+
+        String compose = Files.readString(project.resolve("docker-compose.yml"));
+        assertTrue(compose.contains("image: mongo:7"));
+        assertTrue(compose.contains("MONGO_INITDB_DATABASE: test"));
+
+        String readme = Files.readString(project.resolve("README.md"));
+        assertTrue(readme.contains("**MongoDB**"));
+        assertTrue(readme.contains("Testcontainers"));
+        assertTrue(readme.contains("Docker"));
+        assertTrue(readme.contains("documentos embebidos"));
+    }
+
+    @Test
+    void processDomain_withMongodbAndRelations_throwsClearError() {
+        Domain domain = validDomain();
+        domain.setDatabase(DatabaseEnum.MONGODB);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("MongoDB"));
+        assertTrue(exception.getMessage().contains("relaciones"));
+        assertTrue(exception.getMessage().contains("cliente"));
+    }
+
+    @Test
+    void processDomain_withOneToOneRelation_generatesUniqueForeignKey() throws IOException {
+        Domain domain = new Domain();
+        domain.setTitle("Mi Proyecto");
+        domain.setDatabase(DatabaseEnum.POSTGRESQL);
+
+        Entity persona = entity("persona");
+        persona.getAttributes().put("nombre", attribute(TypeEnum.STRING, null));
+        persona.getAttributes().put("direccion",
+                attribute(TypeEnum.CUSTOM_ONE_TO_ONE, "direccion"));
+
+        Entity direccion = entity("direccion");
+        direccion.getAttributes().put("calle", attribute(TypeEnum.STRING, null));
+
+        domain.setEntities(new ArrayList<>(List.of(persona, direccion)));
+
+        Path project = track(domainService.processDomain(domain));
+
+        String personaFile = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Persona.java"));
+        assertTrue(personaFile.contains("@OneToOne(cascade = CascadeType.ALL)"));
+        assertTrue(personaFile.contains("@JoinColumn(name = \"direccion_id\", unique = true)"));
+        assertTrue(personaFile.contains("private Direccion direccion;"));
+
+        String schema = Files.readString(project.resolve("doc/scripts/schema.sql"));
+        assertTrue(schema.contains("\"direccion_id\" BIGINT UNIQUE"));
+        assertTrue(schema.contains(
+                "FOREIGN KEY (\"direccion_id\") REFERENCES \"direccion\"(\"id\")"));
+
+        String testSchema = Files.readString(project.resolve("src/test/resources/schema.sql"));
+        assertTrue(testSchema.contains("\"direccion_id\" BIGINT UNIQUE"));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PersonaService.java"));
+        assertTrue(service.contains("direccionService.save(persona.getDireccion())"));
+    }
+
+    @Test
+    void processDomain_withManyToManyRelation_generatesJoinTable() throws IOException {
+        Domain domain = new Domain();
+        domain.setTitle("Mi Proyecto");
+        domain.setDatabase(DatabaseEnum.POSTGRESQL);
+
+        Entity persona = entity("persona");
+        persona.getAttributes().put("nombre", attribute(TypeEnum.STRING, null));
+        persona.getAttributes().put("proyectos",
+                attribute(TypeEnum.CUSTOM_MANY_TO_MANY, "proyecto"));
+
+        Entity proyecto = entity("proyecto");
+        proyecto.getAttributes().put("titulo", attribute(TypeEnum.STRING, null));
+
+        domain.setEntities(new ArrayList<>(List.of(persona, proyecto)));
+
+        Path project = track(domainService.processDomain(domain));
+
+        String personaFile = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Persona.java"));
+        assertTrue(personaFile.contains("@ManyToMany(cascade = {CascadeType.PERSIST, CascadeType.MERGE})"));
+        assertTrue(personaFile.contains("@JoinTable(name = \"persona_proyectos\","));
+        assertTrue(personaFile.contains("joinColumns = @JoinColumn(name = \"persona_id\"),"));
+        assertTrue(personaFile.contains("inverseJoinColumns = @JoinColumn(name = \"proyecto_id\"))"));
+        assertTrue(personaFile.contains("private List<Proyecto> proyectos;"));
+
+        String schema = Files.readString(project.resolve("doc/scripts/schema.sql"));
+        assertTrue(schema.contains("CREATE TABLE IF NOT EXISTS \"persona_proyectos\"("));
+        assertTrue(schema.contains("\"persona_id\" BIGINT"));
+        assertTrue(schema.contains("\"proyecto_id\" BIGINT"));
+        assertTrue(schema.contains("PRIMARY KEY (\"persona_id\", \"proyecto_id\")"));
+        assertTrue(schema.contains(
+                "FOREIGN KEY (\"persona_id\") REFERENCES \"persona\"(\"id\")"));
+        assertTrue(schema.contains(
+                "FOREIGN KEY (\"proyecto_id\") REFERENCES \"proyecto\"(\"id\")"));
+
+        String testSchema = Files.readString(project.resolve("src/test/resources/schema.sql"));
+        assertTrue(testSchema.contains("PRIMARY KEY (\"persona_id\", \"proyecto_id\")"));
+    }
+
+    @Test
+    void processDomain_withMongodbComposition_generatesNestedDocumentsWithoutCrud() throws IOException {
+        Domain domain = mongoCompositionDomain();
+        domain.setDatabase(DatabaseEnum.MONGODB);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String pedido = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Pedido.java"));
+        assertTrue(pedido.contains("@Document(collection = \"pedido\")"));
+        assertTrue(pedido.contains("private Direccion direccion;"));
+        assertTrue(pedido.contains("private List<Item> items;"));
+        assertTrue(pedido.contains("import java.util.List;"));
+        assertFalse(pedido.contains("@OneToOne"));
+        assertFalse(pedido.contains("@ManyToOne"));
+
+        String direccion = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Direccion.java"));
+        assertTrue(direccion.contains("public class Direccion"));
+        assertTrue(direccion.contains("private String calle;"));
+        assertFalse(direccion.contains("@Document"));
+        assertFalse(direccion.contains("@Id"));
+        assertFalse(direccion.contains("fechaCreacion"));
+
+        String item = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Item.java"));
+        assertTrue(item.contains("public class Item"));
+
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/repository/PedidoRepository.java")));
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/service/PedidoService.java")));
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PedidoController.java")));
+        assertTrue(Files.exists(project.resolve(
+                "src/test/java/com/example/projectBase/tests/service/PedidoServiceTest.java")));
+
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/repository/DireccionRepository.java")));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/service/DireccionService.java")));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/DireccionController.java")));
+        assertFalse(Files.exists(project.resolve(
+                "src/test/java/com/example/projectBase/tests/service/DireccionServiceTest.java")));
+        assertFalse(Files.exists(project.resolve(
+                "src/test/java/com/example/projectBase/builder/DireccionBuilder.java")));
+
+        String builder = Files.readString(project.resolve(
+                "src/test/java/com/example/projectBase/builder/PedidoBuilder.java"));
+        assertTrue(builder.contains("withDireccion(Direccion val)"));
+        assertTrue(builder.contains("withItems(List<Item> val)"));
+
+        String readme = Files.readString(project.resolve("README.md"));
+        assertTrue(readme.contains("documentos embebidos"));
+        assertTrue(readme.contains("no tienen colección ni API propia"));
+    }
+
+    @Test
+    void processDomain_withMongodbCompositionToRootEntity_throwsClearError() {
+        Domain domain = mongoCompositionDomain();
+        domain.getEntities().stream()
+                .filter(entity -> entity.getEntityName().equals("direccion"))
+                .findFirst()
+                .orElseThrow()
+                .setEmbedded(false);
+        domain.setDatabase(DatabaseEnum.MONGODB);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("documento embebido"));
+        assertTrue(exception.getMessage().contains("direccion"));
+    }
+
+    @Test
+    void processDomain_withMongodbEmbeddedEntityContainingComposition_throwsClearError() {
+        Domain domain = mongoCompositionDomain();
+        Entity direccion = domain.getEntities().stream()
+                .filter(entity -> entity.getEntityName().equals("direccion"))
+                .findFirst()
+                .orElseThrow();
+        direccion.getAttributes().put("item",
+                attribute(TypeEnum.COMPOSITION, "item"));
+        domain.setDatabase(DatabaseEnum.MONGODB);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("embebida"));
+        assertTrue(exception.getMessage().contains("composiciones"));
+    }
+
+    @Test
+    void processDomain_withCompositionInSql_throwsClearError() {
+        Domain domain = mongoCompositionDomain();
+        domain.setDatabase(DatabaseEnum.POSTGRESQL);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("solo es válida para MongoDB"));
+    }
+
+    @Test
+    void processDomain_withEmbeddedEntityInSql_throwsClearError() {
+        Domain domain = flatDomain();
+        domain.getEntities().get(0).setEmbedded(true);
+        domain.setDatabase(DatabaseEnum.POSTGRESQL);
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("documento embebido"));
+        assertTrue(exception.getMessage().contains("MongoDB"));
+    }
+
+    @Test
+    void processDomain_withDefaultApi_generatesRestControllers() throws IOException {
+        Path project = track(domainService.processDomain(validDomain()));
+
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaController.java")));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaGraphQLController.java")));
+        assertFalse(Files.exists(project.resolve("src/main/resources/graphql/schema.graphqls")));
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/advice/AdviceController.java")));
+
+        String pom = Files.readString(project.resolve("pom.xml"));
+        assertFalse(pom.contains("spring-boot-starter-graphql"));
+        assertTrue(pom.contains("spring-data-rest-hal-explorer"));
+        assertFalse(pom.contains("API_DEPENDENCY"));
+        assertFalse(pom.contains("REST_EXPLORER_DEPENDENCY"));
+
+        String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
+        assertFalse(properties.contains("spring.graphql"));
+
+        String readme = Files.readString(project.resolve("README.md"));
+        assertTrue(readme.contains("La API REST queda disponible en `http://localhost:8080/api/...`."));
+        assertFalse(readme.contains("API GraphQL"));
+    }
+
+    @Test
+    void processDomain_withGraphql_generatesGraphqlControllersSchemaAndConfiguration() throws IOException {
+        Domain domain = validDomain();
+        domain.setApiType(ApiEnum.GRAPHQL);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String pom = Files.readString(project.resolve("pom.xml"));
+        assertTrue(pom.contains("<artifactId>spring-boot-starter-graphql</artifactId>"));
+        assertFalse(pom.contains("spring-data-rest-hal-explorer"));
+        assertFalse(pom.contains("API_DEPENDENCY"));
+        assertFalse(pom.contains("REST_EXPLORER_DEPENDENCY"));
+
+        String personaController = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaGraphQLController.java"));
+        assertTrue(personaController.contains("@QueryMapping"));
+        assertTrue(personaController.contains("findAllPersona()"));
+        assertTrue(personaController.contains("findPersonaById(@Argument(\"id\") String id)"));
+        assertTrue(personaController.contains("@MutationMapping"));
+        assertTrue(personaController.contains("createPersona(@Argument(\"input\") Persona persona)"));
+        assertTrue(personaController.contains("persona.setId(null);"));
+        assertTrue(personaController.contains("personaService.findById(Long.valueOf(id))"));
+        assertFalse(personaController.contains("@SchemaMapping"));
+
+        String pedidoController = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PedidoGraphQLController.java"));
+        assertTrue(pedidoController.contains("pedidoService.delete(Long.valueOf(id))"));
+
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaController.java")));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/advice/AdviceController.java")));
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/advice/GraphQLExceptionHandler.java")));
+
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/config/GraphQLScalarConfig.java")));
+
+        String scalarConfig = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/config/GraphQLScalarConfig.java"));
+        assertTrue(scalarConfig.contains("RuntimeWiringConfigurer"));
+        assertTrue(scalarConfig.contains("\"Date\""));
+        assertTrue(scalarConfig.contains("\"DateTime\""));
+        assertTrue(scalarConfig.contains("\"Time\""));
+        assertTrue(scalarConfig.contains("\"BigDecimal\""));
+        assertTrue(scalarConfig.contains("\"UUID\""));
+
+        String schema = Files.readString(project.resolve("src/main/resources/graphql/schema.graphqls"));
+        assertTrue(schema.contains("scalar Date\nscalar DateTime\nscalar Time\nscalar BigDecimal\nscalar UUID\n"));
+        assertTrue(schema.contains("type Persona {\n  id: ID!\n  fechaCreacion: DateTime\n"));
+        assertTrue(schema.contains("input PersonaInput {\n  id: ID\n"));
+        assertTrue(schema.contains("type Pedido {"));
+        assertTrue(schema.contains("cliente: Persona"));
+        assertTrue(schema.contains("items: [Persona]"));
+        assertTrue(schema.contains("input PedidoInput {"));
+        assertTrue(schema.contains("cliente: PersonaInput"));
+        assertTrue(schema.contains("items: [PersonaInput]"));
+        assertTrue(schema.contains("findAllPersona: [Persona!]!"));
+        assertTrue(schema.contains("findPersonaById(id: ID!): Persona"));
+        assertTrue(schema.contains("createPedido(input: PedidoInput!): Pedido!"));
+        assertTrue(schema.contains("updatePedido(input: PedidoInput!): Pedido!"));
+        assertTrue(schema.contains("deletePedido(id: ID!): Boolean!"));
+
+        String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
+        assertTrue(properties.contains("spring.graphql.graphiql.enabled=true"));
+        assertTrue(properties.contains("spring.graphql.schema.printer.enabled=true"));
+
+        String readme = Files.readString(project.resolve("README.md"));
+        assertTrue(readme.contains("## API GraphQL"));
+        assertTrue(readme.contains("http://localhost:8080/graphiql"));
+        assertTrue(readme.contains("La API GraphQL queda disponible en `http://localhost:8080/graphql`."));
+    }
+
+    @Test
+    void processDomain_withMongodbAndGraphql_generatesCompositionInputsAndStringIds() throws IOException {
+        Domain domain = mongoCompositionDomain();
+        domain.setDatabase(DatabaseEnum.MONGODB);
+        domain.setApiType(ApiEnum.GRAPHQL);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String controller = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PedidoGraphQLController.java"));
+        assertTrue(controller.contains("pedidoService.findById(id)"));
+        assertTrue(controller.contains("pedidoService.delete(id)"));
+
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PedidoGraphQLController.java")));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/DireccionGraphQLController.java")));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/ItemGraphQLController.java")));
+
+        String schema = Files.readString(project.resolve("src/main/resources/graphql/schema.graphqls"));
+        assertTrue(schema.contains("type Pedido {"));
+        assertTrue(schema.contains("direccion: Direccion"));
+        assertTrue(schema.contains("items: [Item]"));
+        assertTrue(schema.contains("input DireccionInput {\n  calle: String\n}"));
+        assertTrue(schema.contains("input ItemInput {\n  producto: String\n}"));
+        assertTrue(schema.contains("direccion: DireccionInput"));
+        assertTrue(schema.contains("items: [ItemInput]"));
+        assertTrue(schema.contains("type Query {\n  findAllPedido: [Pedido!]!\n"));
+        assertFalse(schema.contains("findAllDireccion"));
+
+        String readme = Files.readString(project.resolve("README.md"));
+        assertTrue(readme.contains("## API GraphQL"));
+    }
+
+    @Test
+    void processDomain_withGraphqlAndReservedTypeName_throwsClearError() {
+        Domain domain = validDomain();
+        domain.setApiType(ApiEnum.GRAPHQL);
+        domain.getEntities().add(entity("query"));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("reservado"));
+    }
+
+    @Test
+    void processDomain_withGraphqlAndDuplicatedField_throwsClearError() {
+        Domain domain = validDomain();
+        domain.setApiType(ApiEnum.GRAPHQL);
+        domain.getEntities().get(1).getAttributes().put("items", attribute(TypeEnum.STRING, null));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("campo duplicado"));
+    }
+
     private long countOccurrences(String value, String token) {
         return value.split(java.util.regex.Pattern.quote(token), -1).length - 1;
     }
@@ -527,6 +1178,44 @@ class DomainServiceTest {
         pedido.getAttributes().put("item", attribute(TypeEnum.CUSTOM_LIST, "persona"));
 
         domain.setEntities(new ArrayList<>(List.of(persona, pedido)));
+        return domain;
+    }
+
+    private Domain flatDomain() {
+        Domain domain = new Domain();
+        domain.setTitle("Mi Proyecto");
+
+        Entity persona = entity("persona");
+        persona.getAttributes().put("nombre",
+                attribute(TypeEnum.STRING, null, ValidationEnum.NOT_BLANK));
+
+        Entity pedido = entity("pedido");
+        pedido.getAttributes().put("total", attribute(TypeEnum.INTEGER, null));
+
+        domain.setEntities(new ArrayList<>(List.of(persona, pedido)));
+        return domain;
+    }
+
+    private Domain mongoCompositionDomain() {
+        Domain domain = new Domain();
+        domain.setTitle("Mi Proyecto");
+
+        Entity pedido = entity("pedido");
+        pedido.getAttributes().put("numero", attribute(TypeEnum.STRING, null));
+        pedido.getAttributes().put("direccion",
+                attribute(TypeEnum.COMPOSITION, "direccion"));
+        pedido.getAttributes().put("item",
+                attribute(TypeEnum.COMPOSITION_LIST, "item"));
+
+        Entity direccion = entity("direccion");
+        direccion.setEmbedded(true);
+        direccion.getAttributes().put("calle", attribute(TypeEnum.STRING, null));
+
+        Entity item = entity("item");
+        item.setEmbedded(true);
+        item.getAttributes().put("producto", attribute(TypeEnum.STRING, null));
+
+        domain.setEntities(new ArrayList<>(List.of(pedido, direccion, item)));
         return domain;
     }
 

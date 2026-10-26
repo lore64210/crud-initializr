@@ -1,5 +1,6 @@
 package com.ahre.crudinitializr.vo;
 
+import com.ahre.crudinitializr.enums.ApiEnum;
 import com.ahre.crudinitializr.enums.DatabaseEnum;
 import lombok.Data;
 
@@ -11,6 +12,7 @@ public class Domain {
 
     private String title;
     private DatabaseEnum database = DatabaseEnum.POSTGRESQL;
+    private ApiEnum apiType = ApiEnum.REST;
     private List<Entity> entities = new ArrayList<>();
 
 }

@@ -1,3 +1,8 @@
+.MuiButton-root {
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
 body {
   margin: 0;
   --primary-background-color: #6db33f;
@@ -273,6 +278,27 @@ body {
   border: 1px solid rgba(109, 179, 63, 0.4);
   border-radius: 10px !important;
   box-shadow: none !important;
+}
+
+.entity-embedded-toggle {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15em;
+  margin-top: 0.75em;
+  padding: 0.5em 0.65em;
+  border: 1px solid rgba(109, 179, 63, 0.25);
+  border-radius: 8px;
+  background-color: rgba(128, 234, 110, 0.04);
+}
+
+.entity-embedded-toggle .MuiFormControlLabel-label {
+  color: #cfe4c6;
+  font-size: 0.8rem;
+}
+
+.entity-embedded-toggle .MuiTypography-root {
+  color: #8fae86 !important;
+  font-size: 0.68rem !important;
 }
 
 .attribute-card {
@@ -733,6 +759,10 @@ html {
   color: #eaf7e4;
 }
 
+.database-selector--api {
+  margin-top: 0;
+}
+
 .database-selector__header {
   display: flex;
   align-items: flex-start;
@@ -838,6 +868,137 @@ html {
   margin-top: 0.5em !important;
   color: #71856c !important;
   font-size: 0.62rem !important;
+}
+
+/* ---- Advertencias de compatibilidad ---- */
+
+.compatibility-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55em;
+  margin-top: 0.65em;
+  padding: 0.55em 0.7em;
+  border: 1px solid rgba(240, 181, 65, 0.32);
+  border-left: 3px solid #f0b541;
+  border-radius: 8px;
+  background: linear-gradient(
+    135deg,
+    rgba(240, 181, 65, 0.09),
+    rgba(240, 181, 65, 0.02)
+  );
+}
+
+.compatibility-warning__icon {
+  flex-shrink: 0;
+  margin-top: 0.05em;
+  color: #f0b541;
+  font-size: 1.05rem !important;
+}
+
+.compatibility-warning__content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12em;
+  min-width: 0;
+}
+
+.compatibility-warning__title {
+  color: #ffd27a;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.compatibility-warning__text {
+  color: #c9bfa5;
+  font-size: 0.66rem;
+  line-height: 1.45;
+}
+
+.compatibility-dialog-paper {
+  background-color: #151b17 !important;
+  color: #eaf7e4 !important;
+  border: 1px solid rgba(240, 181, 65, 0.42);
+  border-radius: 12px !important;
+}
+
+.compatibility-dialog__title {
+  display: flex !important;
+  flex-direction: column;
+  gap: 0.2em;
+  padding-bottom: 0.6em !important;
+}
+
+.compatibility-dialog__eyebrow {
+  color: #ffd27a;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.compatibility-dialog__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.4em;
+  color: #eaf7e4 !important;
+  font-size: 1.12rem !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+}
+
+.compatibility-dialog__icon {
+  flex-shrink: 0;
+  color: #f0b541;
+  font-size: 1.35rem !important;
+}
+
+.compatibility-dialog__content {
+  border-top-color: rgba(240, 181, 65, 0.2) !important;
+  border-bottom-color: rgba(240, 181, 65, 0.2) !important;
+}
+
+.compatibility-dialog__intro {
+  margin: 0 0 0.8em;
+  color: #cfe4c6;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.compatibility-dialog__note {
+  margin: 0;
+  padding: 0.7em 0.8em;
+  border: 1px dashed rgba(240, 181, 65, 0.32);
+  border-radius: 8px;
+  background-color: rgba(240, 181, 65, 0.05);
+  color: #a99d81;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.compatibility-dialog__actions {
+  padding: 0.8em 1.25em 1em !important;
+}
+
+.compatibility-dialog__cancel {
+  color: #9bc98c !important;
+  text-transform: none !important;
+  font-weight: 600 !important;
+}
+
+.compatibility-dialog__confirm {
+  text-transform: none !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  border-radius: 8px !important;
+  background: linear-gradient(135deg, #f0b541, #c98a1f) !important;
+  color: #1b1408 !important;
+  box-shadow: 0 4px 14px rgba(240, 181, 65, 0.2) !important;
+}
+
+.compatibility-dialog__confirm:hover {
+  filter: brightness(1.06);
 }
 
 /* ---- Mapa de relaciones ---- */
@@ -954,6 +1115,25 @@ html {
 
 .relation-graph-legend__line--dashed {
   border-top-style: dashed;
+}
+
+.relation-graph-legend__line--composition {
+  border-top-style: dotted;
+  border-top-width: 3px;
+}
+
+.relation-graph-legend__line--composition-list {
+  border-top-style: dotted;
+  border-top-width: 3px;
+  border-top-color: #b6f26b;
+}
+
+.relation-graph-legend__line--one-to-one {
+  border-top-width: 3px;
+}
+
+.relation-graph-legend__line--many-to-many {
+  border-top: 3px double #80ea6e;
 }
 
 .relation-graph-legend__hint {
@@ -1101,15 +1281,13 @@ html {
 }
 
 .relation-node__handle-plus {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  height: 100%;
   color: #d7ff9e;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
+  line-height: 0;
   pointer-events: none;
 }
 
@@ -1141,6 +1319,13 @@ html {
   opacity: 0.85;
 }
 
+.relation-node__badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  flex-shrink: 0;
+}
+
 .relation-node__badge {
   flex-shrink: 0;
   min-width: 1.5em;
@@ -1150,6 +1335,27 @@ html {
   font-size: 0.66rem;
   font-weight: 700;
   text-align: center;
+}
+
+.relation-node__badge--embedded {
+  background-color: #d7ff9e;
+  color: #141b17;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+}
+
+.relation-node--embedded {
+  border-style: dashed;
+  background-image: linear-gradient(
+    135deg,
+    rgba(128, 234, 110, 0.04) 25%,
+    transparent 25%,
+    transparent 50%,
+    rgba(128, 234, 110, 0.04) 50%,
+    rgba(128, 234, 110, 0.04) 75%,
+    transparent 75%
+  );
+  background-size: 12px 12px;
 }
 
 .relation-node__body {
@@ -1272,6 +1478,11 @@ html {
   border-style: dashed;
 }
 
+.relation-edge-label--composition {
+  border-style: dotted;
+  border-width: 2px;
+}
+
 .relation-edge-label--active {
   box-shadow:
     0 0 0 2px rgba(128, 234, 110, 0.28),
@@ -1376,12 +1587,15 @@ html {
 }
 
 .relation-dialog__toggle .MuiToggleButton-root.Mui-selected {
-  background-color: rgba(109, 179, 63, 0.25);
-  color: #eaf7e4;
+  border-color: #80ea6e !important;
+  background-color: rgba(128, 234, 110, 0.28) !important;
+  box-shadow: inset 0 0 0 1px rgba(128, 234, 110, 0.65);
+  color: #f2ffe9 !important;
+  font-weight: 700;
 }
 
 .relation-dialog__toggle .MuiToggleButton-root.Mui-selected:hover {
-  background-color: rgba(109, 179, 63, 0.35);
+  background-color: rgba(128, 234, 110, 0.38) !important;
 }
 
 .relation-dialog__hint {

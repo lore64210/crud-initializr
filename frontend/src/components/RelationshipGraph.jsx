@@ -56,13 +56,33 @@ const RELATION_COLORS = [
   "#c3f47a",
 ];
 
+const SQL_RELATION_TYPES = [
+  "CUSTOM",
+  "CUSTOM_LIST",
+  "CUSTOM_ONE_TO_ONE",
+  "CUSTOM_MANY_TO_MANY",
+];
+const MONGO_COMPOSITION_TYPES = ["COMPOSITION", "COMPOSITION_LIST"];
+
+const isRelationType = (type) => SQL_RELATION_TYPES.includes(type);
+const isCompositionType = (type) => MONGO_COMPOSITION_TYPES.includes(type);
+const isLinkType = (type) => isRelationType(type) || isCompositionType(type);
+const isListType = (type) =>
+  type === "CUSTOM_LIST" ||
+  type === "CUSTOM_MANY_TO_MANY" ||
+  type === "COMPOSITION_LIST";
+
 const TYPE_LABELS = {
   STRING: "String",
   INTEGER: "Integer",
   LONG: "Long",
   BOOLEAN: "Boolean",
-  CUSTOM: "Relación",
-  CUSTOM_LIST: "Lista",
+  CUSTOM: "N:1",
+  CUSTOM_LIST: "1:N",
+  CUSTOM_ONE_TO_ONE: "1:1",
+  CUSTOM_MANY_TO_MANY: "N:M",
+  COMPOSITION: "Composición 1:1",
+  COMPOSITION_LIST: "Composición 1:N",
 };
 
 function normalizeName(value) {
@@ -78,7 +98,7 @@ function pluralize(value) {
 
 function suggestRelationName(source, targetName, type) {
   const base = formatStringToCamelCase(targetName) || "relacion";
-  const suggestion = type === "CUSTOM_LIST" ? pluralize(base) : base;
+  const suggestion = isListType(type) ? pluralize(base) : base;
   const used = new Set(
     (source?.attributes || []).map((attribute) =>
       formatStringToCamelCase(attribute.name).toLowerCase(),
@@ -103,14 +123,17 @@ function colorForEntity(uuid) {
 }
 
 function attributeSummary(attribute) {
-  const isRelation = attribute.type.includes("CUSTOM");
+  const link = isLinkType(attribute.type);
   const name = attribute.name.trim();
-  if (isRelation) {
+  if (link) {
     const target = (attribute.customType || "").trim();
     return {
       name: name || "sin nombre",
-      typeLabel: target ? `→ ${target}${attribute.type === "CUSTOM_LIST" ? " []" : ""}` : "sin destino",
+      typeLabel: target
+        ? `→ ${target}${isListType(attribute.type) ? " []" : ""}`
+        : "sin destino",
       relation: true,
+      composition: isCompositionType(attribute.type),
       incomplete: !target,
     };
   }
@@ -118,11 +141,13 @@ function attributeSummary(attribute) {
     name: name || "sin nombre",
     typeLabel: TYPE_LABELS[attribute.type] || attribute.type,
     relation: false,
+    composition: false,
     incomplete: false,
   };
 }
 
-function buildEntityGraph(entities) {
+function buildEntityGraph(entities, database = "POSTGRESQL") {
+  const isMongo = database === "MONGODB";
   const byName = new Map();
   for (const entity of entities) {
     const key = normalizeName(entity.entityName);
@@ -138,8 +163,23 @@ function buildEntityGraph(entities) {
       ...attributes.filter((attribute) => attribute.relation),
       ...attributes.filter((attribute) => !attribute.relation),
     ];
-    const relationCount = attributes.filter((attribute) => attribute.relation).length;
-    const incompleteCount = attributes.filter((attribute) => attribute.incomplete).length;
+    const relationCount = attributes.filter(
+      (attribute) => attribute.relation && !attribute.composition,
+    ).length;
+    const compositionCount = attributes.filter(
+      (attribute) => attribute.relation && attribute.composition,
+    ).length;
+    const incompleteCount = attributes.filter(
+      (attribute) => attribute.incomplete,
+    ).length;
+    const linkCount = relationCount + compositionCount;
+
+    let linkKind = isMongo ? "composición" : "relación";
+    if (compositionCount > 0 && relationCount === 0) {
+      linkKind = "composición";
+    } else if (compositionCount > 0 && relationCount > 0) {
+      linkKind = "vínculo";
+    }
 
     return {
       id: entity.uuid,
@@ -148,11 +188,19 @@ function buildEntityGraph(entities) {
       data: {
         title: entity.entityName.trim() || "Entidad sin nombre",
         unnamed: !entity.entityName.trim(),
+        embedded: !!entity.embedded,
         attributes: ordered.slice(0, MAX_VISIBLE_ATTRIBUTES),
-        hiddenAttributeCount: Math.max(0, ordered.length - MAX_VISIBLE_ATTRIBUTES),
+        hiddenAttributeCount: Math.max(
+          0,
+          ordered.length - MAX_VISIBLE_ATTRIBUTES,
+        ),
         totalAttributes: attributes.length,
         relationCount,
+        compositionCount,
+        linkCount,
+        linkKind,
         incompleteCount,
+        connectable: !entity.embedded,
       },
     };
   });
@@ -160,19 +208,30 @@ function buildEntityGraph(entities) {
   for (const entity of entities) {
     const color = colorForEntity(entity.uuid);
     for (const attribute of entity.attributes || []) {
-      if (!attribute.type.includes("CUSTOM")) continue;
+      if (!isLinkType(attribute.type)) continue;
 
       const targetName = (attribute.customType || "").trim();
       if (!targetName) continue;
 
       const target = byName.get(normalizeName(targetName));
-      const isList = attribute.type === "CUSTOM_LIST";
+      const list = isListType(attribute.type);
+      const composition = isCompositionType(attribute.type);
       const edgeColor = target ? color : "#ff8a75";
+      const cardinality =
+        attribute.type === "CUSTOM"
+          ? "N:1"
+          : attribute.type === "CUSTOM_MANY_TO_MANY"
+            ? "N:M"
+            : attribute.type === "CUSTOM_LIST" ||
+                attribute.type === "COMPOSITION_LIST"
+              ? "1:N"
+              : "1:1";
 
       const data = {
         label: attribute.name.trim() || "sin nombre",
-        cardinality: isList ? "1:N" : "N:1",
-        list: isList,
+        cardinality,
+        list,
+        composition,
         missing: !target,
         color: edgeColor,
       };
@@ -254,11 +313,24 @@ function layoutGraph(nodes, edges) {
 }
 
 function EntityNode({ data, selected }) {
+  const linkKind =
+    data.linkKind === "composición"
+      ? data.linkCount === 1
+        ? "composición"
+        : "composiciones"
+      : data.linkKind === "vínculo"
+        ? data.linkCount === 1
+          ? "vínculo"
+          : "vínculos"
+        : data.linkCount === 1
+          ? "relación"
+          : "relaciones";
+
   return (
     <div
       className={`relation-node${selected ? " relation-node--selected" : ""}${
         data.unnamed ? " relation-node--unnamed" : ""
-      }`}
+      }${data.embedded ? " relation-node--embedded" : ""}`}
       title={`${data.title} · click para editar`}
     >
       <Handle
@@ -266,11 +338,18 @@ function EntityNode({ data, selected }) {
         position={Position.Top}
         isConnectable
         className="relation-node__handle relation-node__handle--target"
-        title="Soltá una relación acá"
+        title="Soltá un vínculo acá"
       />
       <div className="relation-node__header">
         <span className="relation-node__name">{data.title}</span>
-        <span className="relation-node__badge">{data.totalAttributes}</span>
+        <span className="relation-node__badges">
+          {data.embedded && (
+            <span className="relation-node__badge relation-node__badge--embedded">
+              EMBED
+            </span>
+          )}
+          <span className="relation-node__badge">{data.totalAttributes}</span>
+        </span>
       </div>
       <div className="relation-node__body">
         {data.attributes.length === 0 && (
@@ -297,8 +376,7 @@ function EntityNode({ data, selected }) {
       </div>
       <div className="relation-node__footer">
         <span>
-          {data.relationCount}{" "}
-          {data.relationCount === 1 ? "relación" : "relaciones"}
+          {data.linkCount} {linkKind}
         </span>
         {data.incompleteCount > 0 && (
           <span className="relation-node__warning">
@@ -309,11 +387,19 @@ function EntityNode({ data, selected }) {
       <Handle
         type="source"
         position={Position.Bottom}
-        isConnectable
+        isConnectable={data.connectable !== false}
         className="relation-node__handle relation-node__handle--source"
-        title="Arrastrá para crear una relación"
+        title={
+          data.connectable === false
+            ? "Los documentos embebidos no pueden originar composiciones"
+            : "Arrastrá para crear un vínculo"
+        }
       >
-        <span className="relation-node__handle-plus">+</span>
+        {data.connectable !== false && (
+          <span className="relation-node__handle-plus">
+            <AddIcon sx={{ fontSize: "9px", display: "block" }} />
+          </span>
+        )}
       </Handle>
     </div>
   );
@@ -365,15 +451,19 @@ function EntityRelationEdge({
         style={{
           stroke: data.color,
           strokeWidth: selected ? 2.8 : 1.9,
-          strokeDasharray: data.list ? "7 5" : undefined,
+          strokeDasharray: data.composition
+            ? "3 4"
+            : data.list
+              ? "7 5"
+              : undefined,
           opacity: data.missing ? 0.9 : 0.95,
         }}
       />
       <EdgeLabelRenderer>
         <div
           className={`relation-edge-label${data.list ? " relation-edge-label--list" : ""}${
-            selected ? " relation-edge-label--active" : ""
-          }`}
+            data.composition ? " relation-edge-label--composition" : ""
+          }${selected ? " relation-edge-label--active" : ""}`}
           style={{
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             borderColor: data.color,
@@ -381,7 +471,9 @@ function EntityRelationEdge({
           }}
         >
           <span className="relation-edge-label__name">{data.label}</span>
-          <span className="relation-edge-label__kind">{data.cardinality}</span>
+          <span className="relation-edge-label__kind">
+            {data.composition ? `compone · ${data.cardinality}` : data.cardinality}
+          </span>
         </div>
       </EdgeLabelRenderer>
     </>
@@ -482,6 +574,7 @@ function GraphCanvas({
 
 function RelationGraphShell({
   entities,
+  database = "POSTGRESQL",
   selectedEntityUuid,
   onSelectEntity,
   onAddEntity,
@@ -506,7 +599,11 @@ function RelationGraphShell({
     [entities],
   );
 
-  const graph = useMemo(() => buildEntityGraph(entities), [entities]);
+  const isMongo = database === "MONGODB";
+  const graph = useMemo(
+    () => buildEntityGraph(entities, database),
+    [entities, database],
+  );
   const structureKey = useMemo(() => {
     const nodeIds = graph.nodes
       .map((node) => node.id)
@@ -656,14 +753,32 @@ function RelationGraphShell({
       const target = sourcesById.get(targetId);
       if (!source || !target) return;
 
-      if (!target.entityName.trim()) {
+      if (source.embedded) {
         setNotice({
           severity: "warning",
-          message: "La entidad destino necesita un nombre antes de relacionarla.",
+          message:
+            "Un documento embebido no puede originar composiciones. Marcá como raíz la entidad origen.",
         });
         return;
       }
 
+      if (!target.entityName.trim()) {
+        setNotice({
+          severity: "warning",
+          message: "La entidad destino necesita un nombre antes de vincularla.",
+        });
+        return;
+      }
+
+      if (isMongo && !target.embedded) {
+        setNotice({
+          severity: "warning",
+          message: `Marcá "${target.entityName.trim()}" como documento embebido para usarla en una composición.`,
+        });
+        return;
+      }
+
+      const initialType = isMongo ? "COMPOSITION" : "CUSTOM";
       setDialog({
         mode: "create",
         sourceId,
@@ -671,12 +786,17 @@ function RelationGraphShell({
         sourceName: source.entityName.trim() || "Entidad sin nombre",
         targetName: target.entityName.trim(),
         targetExists: true,
-        initialName: suggestRelationName(source, target.entityName, "CUSTOM"),
-        initialType: "CUSTOM",
+        targetEmbedded: !!target.embedded,
+        initialName: suggestRelationName(
+          source,
+          target.entityName,
+          initialType,
+        ),
+        initialType,
         otherNames: source.attributes.map((attribute) => attribute.name),
       });
     },
-    [sourcesById],
+    [isMongo, sourcesById],
   );
 
   const handleConnect = useCallback(
@@ -736,6 +856,7 @@ function RelationGraphShell({
         sourceName: source.entityName.trim() || "Entidad sin nombre",
         targetName: attribute.customType.trim() || "Sin entidad",
         targetExists: !!target,
+        targetEmbedded: !!target?.embedded,
         initialName: attribute.name,
         initialType: attribute.type,
         otherNames: source.attributes
@@ -754,7 +875,7 @@ function RelationGraphShell({
       if (connection.target === oldEdge.source) {
         setNotice({
           severity: "warning",
-          message: "Una entidad no puede relacionarse consigo misma.",
+          message: "Una entidad no puede vincularse consigo misma.",
         });
         return;
       }
@@ -774,11 +895,35 @@ function RelationGraphShell({
       );
       if (!source || !target || !attribute) return;
 
+      if (source.embedded) {
+        setNotice({
+          severity: "warning",
+          message: "Un documento embebido no puede originar composiciones.",
+        });
+        return;
+      }
+
+      if (isMongo && !target.embedded) {
+        setNotice({
+          severity: "warning",
+          message: `Marcá "${target.entityName.trim()}" como documento embebido para mover la composición.`,
+        });
+        return;
+      }
+
+      if (!isMongo && target.embedded) {
+        setNotice({
+          severity: "warning",
+          message: `La entidad "${target.entityName.trim()}" está marcada como embebida y no es válida para SQL.`,
+        });
+        return;
+      }
+
       const targetName = target.entityName.trim();
       if (!targetName) {
         setNotice({
           severity: "warning",
-          message: "La entidad destino necesita un nombre antes de relacionarla.",
+          message: "La entidad destino necesita un nombre antes de vincularla.",
         });
         return;
       }
@@ -787,33 +932,37 @@ function RelationGraphShell({
       onUpdateRelation?.(oldEdge.source, oldEdge.id, {
         customType: targetName,
       });
+      const linkWord = isCompositionType(attribute.type)
+        ? "Composición"
+        : "Relación";
       setNotice({
         severity: "success",
-        message: `Relación movida: ${
+        message: `${linkWord} movida: ${
           source.entityName.trim() || "Entidad sin nombre"
         } → ${targetName}. Click en la arista para renombrarla.`,
       });
     },
-    [markConnectionCompleted, onUpdateRelation, sourcesById],
+    [isMongo, markConnectionCompleted, onUpdateRelation, sourcesById],
   );
 
   const handleSaveRelation = useCallback(
     ({ name, type }) => {
       if (!dialog) return;
+      const linkWord = isCompositionType(type) ? "Composición" : "Relación";
       if (dialog.mode === "create") {
         const target = sourcesById.get(dialog.targetId);
         const targetName = target?.entityName.trim() || dialog.targetName;
         onCreateRelation?.(dialog.sourceId, targetName, { name, type });
         setNotice({
           severity: "success",
-          message: `Relación creada: ${dialog.sourceName} → ${targetName}`,
+          message: `${linkWord} creada: ${dialog.sourceName} → ${targetName}`,
         });
       } else {
         onUpdateRelation?.(dialog.sourceId, dialog.attributeId, {
           name,
           type,
         });
-        setNotice({ severity: "success", message: "Relación actualizada" });
+        setNotice({ severity: "success", message: `${linkWord} actualizada` });
       }
       setDialog(null);
     },
@@ -823,7 +972,7 @@ function RelationGraphShell({
   const handleDeleteRelation = useCallback(() => {
     if (!dialog || dialog.mode !== "edit") return;
     onDeleteRelation?.(dialog.sourceId, dialog.attributeId);
-    setNotice({ severity: "info", message: "Relación eliminada" });
+    setNotice({ severity: "info", message: "Vínculo eliminado" });
     setDialog(null);
   }, [dialog, onDeleteRelation]);
 
@@ -917,19 +1066,65 @@ function RelationGraphShell({
         <div className="relation-graph">
           <div className="relation-graph-toolbar">
             <div className="relation-graph-legend">
-              <span className="relation-graph-legend__item" title="Muchos a uno">
-                <span className="relation-graph-legend__line" />
-                N:1
-              </span>
-              <span className="relation-graph-legend__item" title="Uno a muchos">
-                <span className="relation-graph-legend__line relation-graph-legend__line--dashed" />
-                1:N
-              </span>
-              <span className="relation-graph-legend__hint">
-                Click en una entidad para editarla en el panel · Arrastra desde
-                el + para crear una relación · Click en una arista para
-                editarla.
-              </span>
+              {isMongo ? (
+                <>
+                  <span
+                    className="relation-graph-legend__item"
+                    title="Composición uno a uno"
+                  >
+                    <span className="relation-graph-legend__line relation-graph-legend__line--composition" />
+                    1:1
+                  </span>
+                  <span
+                    className="relation-graph-legend__item"
+                    title="Composición uno a muchos"
+                  >
+                    <span className="relation-graph-legend__line relation-graph-legend__line--composition-list" />
+                    1:N
+                  </span>
+                  <span className="relation-graph-legend__hint">
+                    Click en una entidad para editarla · Arrastra desde el +
+                    de una entidad raíz hacia un documento embebido · Click en
+                    una arista para editarla.
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span
+                    className="relation-graph-legend__item"
+                    title="Muchos a uno"
+                  >
+                    <span className="relation-graph-legend__line" />
+                    N:1
+                  </span>
+                  <span
+                    className="relation-graph-legend__item"
+                    title="Uno a muchos"
+                  >
+                    <span className="relation-graph-legend__line relation-graph-legend__line--dashed" />
+                    1:N
+                  </span>
+                  <span
+                    className="relation-graph-legend__item"
+                    title="Uno a uno"
+                  >
+                    <span className="relation-graph-legend__line relation-graph-legend__line--one-to-one" />
+                    1:1
+                  </span>
+                  <span
+                    className="relation-graph-legend__item"
+                    title="Muchos a muchos"
+                  >
+                    <span className="relation-graph-legend__line relation-graph-legend__line--many-to-many" />
+                    N:M
+                  </span>
+                  <span className="relation-graph-legend__hint">
+                    Click en una entidad para editarla en el panel · Arrastra
+                    desde el + para crear una relación · Click en una arista
+                    para editarla.
+                  </span>
+                </>
+              )}
             </div>
             <div className="relation-graph-actions">{actions}</div>
           </div>
@@ -943,12 +1138,12 @@ function RelationGraphShell({
             className="relation-graph-fs"
             role="dialog"
             aria-modal="true"
-            aria-label="Mapa de relaciones"
+            aria-label="Mapa de vínculos"
           >
             <header className="relation-graph-fs__header">
               <div className="relation-graph-fs__titles">
                 <span className="relation-graph-fs__eyebrow">
-                  MAPA DE RELACIONES
+                  {isMongo ? "MAPA DE COMPOSICIONES" : "MAPA DE RELACIONES"}
                 </span>
                 <span className="relation-graph-fs__title">
                   Entidades y sus vínculos
@@ -977,8 +1172,10 @@ function RelationGraphShell({
         open={!!dialog}
         mode={dialog?.mode || "create"}
         sourceName={dialog?.sourceName || ""}
+        database={database}
         targetName={dialog?.targetName || ""}
         targetExists={dialog?.targetExists ?? true}
+        targetEmbedded={dialog?.targetEmbedded ?? false}
         initialName={dialog?.initialName || ""}
         initialType={dialog?.initialType || "CUSTOM"}
         otherNames={dialog?.otherNames || []}
@@ -1015,6 +1212,7 @@ function RelationGraphShell({
 
 function RelationshipGraph({
   entities,
+  database = "POSTGRESQL",
   selectedEntityUuid,
   onSelectEntity,
   onAddEntity,
@@ -1026,6 +1224,7 @@ function RelationshipGraph({
     <ReactFlowProvider>
       <RelationGraphShell
         entities={entities}
+        database={database}
         selectedEntityUuid={selectedEntityUuid}
         onSelectEntity={onSelectEntity}
         onAddEntity={onAddEntity}
@@ -1040,6 +1239,7 @@ function RelationshipGraph({
 export function RelationshipGraphPanel({
   entities,
   relationCount,
+  database = "POSTGRESQL",
   selectedEntityUuid,
   onSelectEntity,
   onAddEntity,
@@ -1052,9 +1252,15 @@ export function RelationshipGraphPanel({
   const toggle = () => setOpen((current) => !current);
 
   const entityCount = entities.length;
-  const summary = `${entityCount} ${entityCount === 1 ? "entidad" : "entidades"} · ${relationCount} ${
-    relationCount === 1 ? "relación" : "relaciones"
-  }`;
+  const linkKind =
+    database === "MONGODB"
+      ? relationCount === 1
+        ? "composición"
+        : "composiciones"
+      : relationCount === 1
+        ? "relación"
+        : "relaciones";
+  const summary = `${entityCount} ${entityCount === 1 ? "entidad" : "entidades"} · ${relationCount} ${linkKind}`;
 
   return (
     <div className="relation-panel-container">
@@ -1076,7 +1282,9 @@ export function RelationshipGraphPanel({
           <AccountTreeIcon className="relation-panel__icon" />
           <div className="relation-panel__titles">
             <Typography className="relation-panel__title">
-              Mapa de relaciones
+              {database === "MONGODB"
+                ? "Mapa de composiciones"
+                : "Mapa de relaciones"}
             </Typography>
             <Typography className="relation-panel__subtitle">
               {summary}
@@ -1092,6 +1300,7 @@ export function RelationshipGraphPanel({
           <div id="relation-panel-body" className="relation-panel__body">
             <RelationshipGraph
               entities={entities}
+              database={database}
               selectedEntityUuid={selectedEntityUuid}
               onSelectEntity={onSelectEntity}
               onAddEntity={onAddEntity}

@@ -1,0 +1,43 @@
+# PROJECT_NAME
+
+Proyecto Spring Boot 4.1.2 con ABM generado por Spring CRUD Initializr.
+
+## Base de datos
+
+- Motor: **DATABASE_LABEL**
+- URI por defecto: `DATABASE_URL`
+- Variable de entorno: `MONGODB_URI`
+
+MongoDB no usa un schema SQL: las colecciones se crean automáticamente al insertar el primer documento. Las entidades raíz tienen colección y CRUD propio; las composiciones se guardan como documentos embebidos dentro de la entidad que las contiene.
+
+### MongoDB con Docker
+
+Levantá la base con:
+
+```bash
+docker compose up -d
+```
+
+La aplicación se conecta por defecto a `DATABASE_URL`. Podés sobreescribir la conexión con `MONGODB_URI`, por ejemplo para apuntar a MongoDB Atlas.
+
+### Composición
+
+Los documentos marcados como embebidos no tienen colección ni API propia: se guardan dentro de la entidad raíz que los compone. Un documento embebido puede usarse en varias composiciones, pero cada copia queda dentro de su entidad contenedora.
+
+API_SECTION
+
+## Ejecutar
+
+```bash
+mvn spring-boot:run
+```
+
+API_RUN_INSTRUCTIONS
+
+## Tests
+
+Los tests usan Testcontainers con un MongoDB real. Requieren Docker en ejecución:
+
+```bash
+mvn test
+```

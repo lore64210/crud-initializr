@@ -1,5 +1,13 @@
 import React from "react";
-import { Button, Card, IconButton, TextField, Typography } from "@mui/material";
+import {
+  Button,
+  Card,
+  FormControlLabel,
+  IconButton,
+  Switch,
+  TextField,
+  Typography,
+} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AttributeForm from "./AttributeForm";
@@ -8,7 +16,10 @@ import "../css/app.css";
 const EntityForm = ({
   entity,
   entities,
+  database,
+  documentMode = false,
   onChangeEntityName,
+  onChangeEmbedded,
   onChangeAttribute,
   onAddAttribute,
   onDeleteAttribute,
@@ -34,6 +45,28 @@ const EntityForm = ({
           <DeleteIcon />
         </IconButton>
       </div>
+      {documentMode && (
+        <div className="entity-embedded-toggle">
+          <FormControlLabel
+            control={
+              <Switch
+                color="success"
+                checked={!!entity.embedded}
+                onChange={({ target: { checked } }) =>
+                  onChangeEmbedded?.(checked)
+                }
+              />
+            }
+            label="Documento embebido"
+          />
+          <Typography variant="body2" color="text.secondary">
+            {entity.embedded
+              ? "Se guarda dentro de otra entidad: no genera colección ni API propia."
+              : "Entidad raíz: genera colección, repository, service y controller."}
+          </Typography>
+        </div>
+      )}
+
       <Typography sx={{ marginTop: "1em" }}>
         Atributos de la entidad:
       </Typography>
@@ -44,6 +77,8 @@ const EntityForm = ({
           attribute={attribute}
           entities={entities}
           entityUuid={entity.uuid}
+          database={database}
+          isEmbedded={!!entity.embedded}
           onChange={onChangeAttribute}
           onDelete={() => onDeleteAttribute(attribute.uuid)}
         />

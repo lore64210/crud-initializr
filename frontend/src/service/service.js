@@ -23,7 +23,8 @@ export const formatStringToCamelCase = (value) => {
 
 const createRequestBody = (data) => ({
   title: data.businessName.trim(),
-  database: data.database || "MYSQL",
+  database: data.database || "POSTGRESQL",
+  apiType: data.apiType || "REST",
   entities: data.entities.map((entity) => {
     const attributes = {};
     entity.attributes.forEach((attribute) => {
@@ -37,11 +38,20 @@ const createRequestBody = (data) => ({
           ? formatStringToCamelCase(attribute.customType)
           : "",
         validations: attribute.validations,
+        minValue:
+          attribute.minValue === "" || attribute.minValue === undefined
+            ? null
+            : attribute.minValue,
+        maxValue:
+          attribute.maxValue === "" || attribute.maxValue === undefined
+            ? null
+            : attribute.maxValue,
       };
     });
     return {
       entityName: formatStringToCamelCase(entity.entityName),
       attributes,
+      embedded: !!entity.embedded,
     };
   }),
 });

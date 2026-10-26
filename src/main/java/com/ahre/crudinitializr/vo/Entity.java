@@ -10,4 +10,5 @@ public class Entity {
 
     private String entityName;
     private HashMap<String, Attribute> attributes;
+    private boolean embedded;
 }

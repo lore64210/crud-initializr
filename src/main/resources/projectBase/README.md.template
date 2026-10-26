@@ -13,13 +13,15 @@ La aplicación lee la configuración de las variables de entorno `DB_URL`, `DB_U
 
 DATABASE_RUN_INSTRUCTIONS
 
+API_SECTION
+
 ## Ejecutar
 
 ```bash
 mvn spring-boot:run
 ```
 
-La API queda disponible en `http://localhost:8080/api/...`.
+API_RUN_INSTRUCTIONS
 
 ## Tests
 

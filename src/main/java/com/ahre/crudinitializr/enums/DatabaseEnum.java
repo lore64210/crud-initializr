@@ -54,6 +54,16 @@ public enum DatabaseEnum {
             "",
             null,
             "sqlite"
+    ),
+    MONGODB(
+            "MongoDB",
+            "org.springframework.boot",
+            "spring-boot-starter-data-mongodb",
+            "mongodb://localhost:27017/test",
+            "",
+            "",
+            "mongo:7",
+            "mongodb"
     );
 
     private final String label;
@@ -85,6 +95,14 @@ public enum DatabaseEnum {
 
     public boolean isEmbedded() {
         return this == H2;
+    }
+
+    public boolean isDocument() {
+        return this == MONGODB;
+    }
+
+    public boolean hasSchema() {
+        return !isDocument();
     }
 
     public boolean hasDockerImage() {
