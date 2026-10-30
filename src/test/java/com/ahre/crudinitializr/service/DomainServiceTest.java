@@ -1043,12 +1043,105 @@ class DomainServiceTest {
         assertFalse(properties.contains("spring.graphql"));
         assertTrue(properties.contains("springdoc.swagger-ui.path=/swagger-ui.html"));
         assertTrue(properties.contains("springdoc.api-docs.path=/v3/api-docs"));
+        assertFalse(properties.contains("app.cache.enabled"));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/config/CacheConfig.java")));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PersonaService.java"));
+        assertFalse(service.contains("@Cacheable"));
+        assertFalse(service.contains("@CachePut"));
+        assertFalse(service.contains("@CacheEvict"));
+
+        String compose = Files.readString(project.resolve("docker-compose.yml"));
+        assertFalse(compose.contains("redis"));
 
         String readme = Files.readString(project.resolve("README.md"));
         assertTrue(readme.contains("## API REST"));
         assertTrue(readme.contains("http://localhost:8080/swagger-ui.html"));
         assertTrue(readme.contains("http://localhost:8080/v3/api-docs"));
         assertFalse(readme.contains("API GraphQL"));
+        assertFalse(readme.contains("## Cache Redis"));
+    }
+
+    @Test
+    void processDomain_withRedisCache_generatesCacheConfigurationAndAnnotations() throws IOException {
+        Domain domain = validDomain();
+        domain.setDatabase(DatabaseEnum.POSTGRESQL);
+        domain.getCache().setEnabled(true);
+        domain.getCache().setPrefix("miapp");
+        domain.getCache().setTtlSeconds(120);
+        domain.getCache().setCacheFindAll(true);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String pom = Files.readString(project.resolve("pom.xml"));
+        assertTrue(pom.contains("<artifactId>spring-boot-starter-data-redis</artifactId>"));
+        assertTrue(pom.contains("<artifactId>spring-boot-starter-cache</artifactId>"));
+        assertFalse(pom.contains("CACHE_DEPENDENCY"));
+        assertFalse(pom.contains("CACHE_PROPERTIES"));
+
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/config/CacheConfig.java")));
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/config/LoggingCacheErrorHandler.java")));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PersonaService.java"));
+        assertTrue(service.contains("@Cacheable(cacheNames = \"persona\", key = \"#id\")"));
+        assertTrue(service.contains("@Cacheable(cacheNames = \"persona-list\", key = \"'all'\")"));
+        assertTrue(service.contains("@Caching(put = @CachePut(cacheNames = \"persona\", key = \"#result.id\"),"));
+        assertTrue(service.contains("evict = @CacheEvict(cacheNames = \"persona-list\", allEntries = true))"));
+        assertTrue(service.contains("@Caching(evict = {@CacheEvict(cacheNames = \"persona\", key = \"#id\"),"));
+        assertTrue(service.contains("@CacheEvict(cacheNames = \"persona-list\", allEntries = true)})"));
+
+        String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
+        assertTrue(properties.contains("app.cache.enabled=true"));
+        assertTrue(properties.contains("app.cache.prefix=miapp"));
+        assertTrue(properties.contains("app.cache.ttl-seconds=120"));
+        assertTrue(properties.contains("spring.cache.type=redis"));
+        assertTrue(properties.contains("${REDIS_URL:redis://localhost:6379}"));
+
+        String testProperties = Files.readString(project.resolve("src/test/resources/application.properties"));
+        assertTrue(testProperties.contains("app.cache.enabled=false"));
+        assertTrue(testProperties.contains("spring.cache.type=none"));
+
+        String compose = Files.readString(project.resolve("docker-compose.yml"));
+        assertTrue(compose.contains("redis:7-alpine"));
+        assertTrue(compose.contains("redis_data:/data"));
+        assertTrue(compose.contains("redis_data:"));
+
+        String readme = Files.readString(project.resolve("README.md"));
+        assertTrue(readme.contains("## Cache Redis"));
+        assertTrue(readme.contains("miapp"));
+        assertTrue(readme.contains("120 segundos"));
+    }
+
+    @Test
+    void processDomain_withRedisCacheAndH2_generatesRedisOnlyCompose() throws IOException {
+        Domain domain = validDomain();
+        domain.setDatabase(DatabaseEnum.H2);
+        domain.getCache().setEnabled(true);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String compose = Files.readString(project.resolve("docker-compose.yml"));
+        assertTrue(compose.contains("redis:7-alpine"));
+        assertFalse(compose.contains("h2"));
+        assertFalse(compose.contains("postgres"));
+    }
+
+    @Test
+    void processDomain_withInvalidRedisPrefix_throwsClearError() {
+        Domain domain = validDomain();
+        domain.getCache().setEnabled(true);
+        domain.getCache().setPrefix("prefijo con espacios");
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("prefijo"));
+        assertTrue(exception.getMessage().contains("Redis"));
     }
 
     @Test

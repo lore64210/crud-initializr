@@ -26,6 +26,8 @@ Los documentos marcados como embebidos no tienen colección ni API propia: se gu
 
 API_SECTION
 
+CACHE_SECTION
+
 ## Ejecutar
 
 ```bash

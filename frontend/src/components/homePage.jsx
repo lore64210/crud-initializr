@@ -2,6 +2,7 @@ import React, { useCallback, useState } from "react";
 import EntityForm from "../components/EntityForm";
 import DatabaseSelector from "../components/DatabaseSelector";
 import ApiSelector from "../components/ApiSelector";
+import CacheSettings from "../components/CacheSettings";
 import { RelationshipGraphPanel } from "../components/RelationshipGraph";
 import service, { formatStringToCamelCase } from "../service/service";
 import uuid from "react-uuid";
@@ -65,7 +66,7 @@ const createEmptyEntity = () => ({
 const warningMessage =
   "WARNING: Segun las validaciones que se usen en los atributos de tipo relación o composición, los test pueden fallar. Revisar los builders que se usan al crear instancias genericas y reemplazar por lo que haga falta";
 
-const validateForm = (businessName, entities, database) => {
+const validateForm = (businessName, entities, database, cache) => {
   const title = businessName.trim();
   if (!title) {
     return "El nombre del proyecto no puede estar vacío";
@@ -75,6 +76,22 @@ const validateForm = (businessName, entities, database) => {
   }
   if (!formatStringToCamelCase(title)) {
     return "El nombre del proyecto debe contener al menos una letra o número";
+  }
+
+  if (cache?.enabled) {
+    const prefix = String(cache.prefix || "").trim();
+    if (!prefix) {
+      return "El prefijo de claves de Redis no puede estar vacío";
+    }
+    if (prefix.length > 50) {
+      return "El prefijo de claves de Redis no puede tener más de 50 caracteres";
+    }
+    if (!/^[A-Za-z0-9:_-]+$/.test(prefix)) {
+      return "El prefijo de claves de Redis solo puede contener letras, números, ':', '_' y '-'";
+    }
+    if (!Number.isInteger(Number(cache.ttlSeconds)) || Number(cache.ttlSeconds) <= 0) {
+      return "El TTL de Redis debe ser un número entero mayor que cero";
+    }
   }
 
   if (entities.length === 0) {
@@ -198,6 +215,12 @@ function HomePage() {
   const [loading, setLoading] = useState(false);
   const [database, setDatabase] = useState("POSTGRESQL");
   const [apiType, setApiType] = useState("REST");
+  const [cache, setCache] = useState({
+    enabled: false,
+    prefix: "crud",
+    ttlSeconds: 600,
+    cacheFindAll: false,
+  });
   const [helpOpen, setHelpOpen] = useState(false);
   const [mongoWarningOpen, setMongoWarningOpen] = useState(false);
   const [sqlWarningOpen, setSqlWarningOpen] = useState(false);
@@ -450,7 +473,7 @@ function HomePage() {
   };
 
   const submit = async () => {
-    const validationError = validateForm(businessName, entities, database);
+    const validationError = validateForm(businessName, entities, database, cache);
     if (validationError) {
       setErrorMessage(validationError);
       return;
@@ -463,6 +486,7 @@ function HomePage() {
       entities,
       database,
       apiType,
+      cache,
     });
     setLoading(false);
 
@@ -546,6 +570,7 @@ function HomePage() {
         }
       />
       <ApiSelector value={apiType} onChange={setApiType} />
+      <CacheSettings value={cache} onChange={setCache} />
       <div className="workspace">
         <div className="workspace__graph">
           <RelationshipGraphPanel

@@ -27,6 +27,12 @@ const createRequestBody = (data) => ({
   title: data.businessName.trim(),
   database: data.database || "POSTGRESQL",
   apiType: data.apiType || "REST",
+  cache: data.cache || {
+    enabled: false,
+    prefix: "crud",
+    ttlSeconds: 600,
+    cacheFindAll: false,
+  },
   entities: data.entities.map((entity) => {
     const attributes = {};
     entity.attributes.forEach((attribute) => {

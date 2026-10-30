@@ -9,5 +9,7 @@ services:
     volumes:
       - mongo_data:/data/db
 
+REDIS_SERVICE
 volumes:
   mongo_data:
+REDIS_VOLUME

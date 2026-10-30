@@ -7,6 +7,7 @@ import com.ahre.crudinitializr.enums.ValidationEnum;
 import com.ahre.crudinitializr.utils.FileUtils;
 import com.ahre.crudinitializr.utils.StringUtils;
 import com.ahre.crudinitializr.vo.Attribute;
+import com.ahre.crudinitializr.vo.CacheSettings;
 import com.ahre.crudinitializr.vo.Domain;
 import com.ahre.crudinitializr.vo.Entity;
 import org.springframework.beans.factory.annotation.Value;
@@ -55,21 +56,24 @@ public class DomainService {
         validateDomain(domain);
         DatabaseEnum database = domain.getDatabase() == null ? DatabaseEnum.POSTGRESQL : domain.getDatabase();
         ApiEnum apiType = domain.getApiType() == null ? ApiEnum.REST : domain.getApiType();
+        CacheSettings cache = domain.getCache() == null ? new CacheSettings() : domain.getCache();
         validateDatabaseCompatibility(domain, database);
         validateApiCompatibility(domain, apiType);
+        validateCacheSettings(cache);
 
         Path project = null;
         try {
             project = fileUtils.createOutputFolder();
             writeStaticFiles(project, database, apiType);
             writeOpenApiConfig(domain.getTitle(), apiType, project);
-            writeProjectReadme(domain.getTitle(), database, apiType, project);
-            writeDockerCompose(domain.getTitle(), database, project);
-            writePomFile(domain.getTitle(), database, apiType, project);
-            writeApplicationProperties(database, apiType, project);
+            writeCacheConfig(cache, project);
+            writeProjectReadme(domain.getTitle(), database, apiType, cache, project);
+            writeDockerCompose(domain.getTitle(), database, cache, project);
+            writePomFile(domain.getTitle(), database, apiType, cache, project);
+            writeApplicationProperties(database, apiType, cache, project);
             for (Entity entity : domain.getEntities()) {
                 writeDomainFile(entity, database, project);
-                writeServiceFile(entity, database, project);
+                writeServiceFile(entity, database, cache, project);
                 writeRepositoryFile(entity, database, project);
                 if (apiType.isGraphQL()) {
                     writeGraphQlControllerFile(entity, database, project);
@@ -260,6 +264,26 @@ public class DomainService {
                 "El proyecto debe tener al menos una entidad raíz para generar una API GraphQL");
     }
 
+    private void validateCacheSettings(CacheSettings cache) {
+        if (!cache.isEnabled()) {
+            return;
+        }
+
+        String prefix = cache.getPrefix();
+        Assert.isTrue(prefix != null && !prefix.trim().isEmpty(),
+                "El prefijo de claves de Redis no puede estar vacío");
+        prefix = prefix.trim();
+        Assert.isTrue(prefix.length() <= 50,
+                "El prefijo de claves de Redis no puede tener más de 50 caracteres");
+        Assert.isTrue(prefix.matches("[A-Za-z0-9:_-]+"),
+                "El prefijo de claves de Redis solo puede contener letras, números, ':', '_' y '-'");
+        Assert.isTrue(cache.getTtlSeconds() > 0,
+                "El TTL de Redis debe ser mayor que cero");
+        Assert.isTrue(cache.getTtlSeconds() <= 31_536_000,
+                "El TTL de Redis no puede superar un año");
+        cache.setPrefix(prefix);
+    }
+
     private void validateSqlCompatibility(Domain domain) {
         for (Entity entity : domain.getEntities()) {
             if (entity.isEmbedded()) {
@@ -399,6 +423,8 @@ public class DomainService {
                     project, destinationPath(srcPath + "/ProjectBaseApplication.java"));
             fileUtils.copyTemplate(templatePath(database, testPath + "/tests/ApplicationTests.java"),
                     project, destinationPath(testPath + "/tests/ApplicationTests.java"));
+            fileUtils.copyTemplate("/mongo/src/test/resources/application.properties",
+                    project, "src/test/resources/application.properties");
         } else {
             List<String> templates = List.of(
                     srcPath + "/ProjectBaseApplication.java",
@@ -419,6 +445,14 @@ public class DomainService {
         fileUtils.copyTemplate("/gitignore.template", project, ".gitignore");
     }
 
+    private void writeCacheConfig(CacheSettings cache, Path project) throws IOException {
+        if (!cache.isEnabled()) {
+            return;
+        }
+        fileUtils.copyTemplate(srcPath + "/config/CacheConfig.java", project);
+        fileUtils.copyTemplate(srcPath + "/config/LoggingCacheErrorHandler.java", project);
+    }
+
     private void writeOpenApiConfig(String title, ApiEnum apiType, Path project) throws IOException {
         if (apiType.isGraphQL()) {
             return;
@@ -436,7 +470,11 @@ public class DomainService {
         return path.replaceFirst("^/+", "");
     }
 
-    private void writePomFile(String title, DatabaseEnum database, ApiEnum apiType, Path project) throws IOException {
+    private void writePomFile(String title,
+                              DatabaseEnum database,
+                              ApiEnum apiType,
+                              CacheSettings cache,
+                              Path project) throws IOException {
         String content = fileUtils.getTemplateContent("/pom.xml");
         String escapedTitle = StringUtils.escapeXml(title.trim());
         content = content.replace("PROJECT_ARTIFACT_ID", StringUtils.toArtifactId(title));
@@ -444,6 +482,9 @@ public class DomainService {
         content = content.replace("PROJECT_DESCRIPTION", escapedTitle);
         content = content.replace("DATABASE_LABEL", database.getLabel());
         content = content.replace("PERSISTENCE_DEPENDENCY", renderPersistenceDependency(database));
+        content = content.replace("CACHE_DEPENDENCY", cache.isEnabled()
+                ? renderCacheDependencies()
+                : "");
         content = content.replace("API_DEPENDENCY", apiType.isGraphQL()
                 ? renderDependency("org.springframework.boot", "spring-boot-starter-graphql", null)
                 : "");
@@ -478,6 +519,11 @@ public class DomainService {
         return dependencies;
     }
 
+    private String renderCacheDependencies() {
+        return renderDependency("org.springframework.boot", "spring-boot-starter-data-redis", null)
+                + "\n" + renderDependency("org.springframework.boot", "spring-boot-starter-cache", null);
+    }
+
     private String renderMongoTestDependencies() {
         return renderDependency("org.springframework.boot", "spring-boot-testcontainers", "test")
                 + "\n" + renderDependency("org.testcontainers", "testcontainers-mongodb", "test")
@@ -499,14 +545,18 @@ public class DomainService {
                 + "\t\t</dependency>";
     }
 
-    private void writeApplicationProperties(DatabaseEnum database, ApiEnum apiType, Path project) throws IOException {
+    private void writeApplicationProperties(DatabaseEnum database,
+                                            ApiEnum apiType,
+                                            CacheSettings cache,
+                                            Path project) throws IOException {
         if (database.isDocument()) {
             String template = fileUtils.getTemplateContent("/mongo/src/main/resources/application.properties");
             String content = template
                     .replace("DATABASE_LABEL", database.getLabel())
                     .replace("DATABASE_URL", "${MONGODB_URI:" + database.getJdbcUrl() + "}")
                     .replace("GRAPHQL_PROPERTIES", graphQlProperties(apiType))
-                    .replace("API_DOCS_PROPERTIES", apiDocsProperties(apiType));
+                    .replace("API_DOCS_PROPERTIES", apiDocsProperties(apiType))
+                    .replace("CACHE_PROPERTIES", cacheProperties(cache));
             fileUtils.writeFile(project + "/src/main/resources/application.properties", content);
             return;
         }
@@ -519,7 +569,8 @@ public class DomainService {
                 .replace("DATABASE_PASSWORD", "${DB_PASSWORD:" + database.getPassword() + "}")
                 .replace("DATABASE_EXTRA_PROPERTIES", extraProperties(database))
                 .replace("GRAPHQL_PROPERTIES", graphQlProperties(apiType))
-                .replace("API_DOCS_PROPERTIES", apiDocsProperties(apiType));
+                .replace("API_DOCS_PROPERTIES", apiDocsProperties(apiType))
+                .replace("CACHE_PROPERTIES", cacheProperties(cache));
         fileUtils.writeFile(project + "/src/main/resources/application.properties", content);
     }
 
@@ -528,6 +579,18 @@ public class DomainService {
             return "";
         }
         return "\n# GraphQL\nspring.graphql.graphiql.enabled=true\nspring.graphql.schema.printer.enabled=true\n";
+    }
+
+    private String cacheProperties(CacheSettings cache) {
+        if (!cache.isEnabled()) {
+            return "";
+        }
+        return "\n# Cache Redis\n"
+                + "app.cache.enabled=true\n"
+                + "app.cache.prefix=" + cache.getPrefix() + "\n"
+                + "app.cache.ttl-seconds=" + cache.getTtlSeconds() + "\n"
+                + "spring.cache.type=redis\n"
+                + "spring.data.redis.url=${REDIS_URL:redis://localhost:6379}\n";
     }
 
     private String apiDocsProperties(ApiEnum apiType) {
@@ -548,7 +611,11 @@ public class DomainService {
         };
     }
 
-    private void writeProjectReadme(String title, DatabaseEnum database, ApiEnum apiType, Path project) throws IOException {
+    private void writeProjectReadme(String title,
+                                    DatabaseEnum database,
+                                    ApiEnum apiType,
+                                    CacheSettings cache,
+                                    Path project) throws IOException {
         if (database.isDocument()) {
             String template = fileUtils.getTemplateContent("/mongo/README.md.template");
             String content = template
@@ -556,6 +623,7 @@ public class DomainService {
                     .replace("DATABASE_LABEL", database.getLabel())
                     .replace("DATABASE_URL", database.getJdbcUrl())
                     .replace("API_SECTION", apiSection(apiType))
+                    .replace("CACHE_SECTION", cacheSection(cache))
                     .replace("API_RUN_INSTRUCTIONS", apiRunInstructions(apiType));
             fileUtils.writeFile(project + "/README.md", content);
             return;
@@ -578,8 +646,23 @@ public class DomainService {
                 .replace("DATABASE_PASSWORD", database.getPassword())
                 .replace("DATABASE_RUN_INSTRUCTIONS", runInstructions)
                 .replace("API_SECTION", apiSection(apiType))
+                .replace("CACHE_SECTION", cacheSection(cache))
                 .replace("API_RUN_INSTRUCTIONS", apiRunInstructions(apiType));
         fileUtils.writeFile(project + "/README.md", content);
+    }
+
+    private String cacheSection(CacheSettings cache) {
+        if (!cache.isEnabled()) {
+            return "";
+        }
+        return "## Cache Redis\n\n"
+                + "El proyecto incluye cache Redis con prefijo `" + cache.getPrefix()
+                + "` y TTL de " + cache.getTtlSeconds() + " segundos.\n\n"
+                + "- `findById` se cachea siempre.\n"
+                + (cache.isCacheFindAll() ? "- `findAll` también se cachea.\n" : "- `findAll` no se cachea.\n")
+                + "- `save`, `edit` y `delete` invalidan o actualizan el cache.\n\n"
+                + "Levantá Redis con `docker compose up -d`. La conexión usa "
+                + "`REDIS_URL`, por defecto `redis://localhost:6379`.\n";
     }
 
     private String apiSection(ApiEnum apiType) {
@@ -636,13 +719,39 @@ public class DomainService {
                 + "Podés sobreescribir con `DB_URL`, `DB_USER` y `DB_PASSWORD`.";
     }
 
-    private void writeDockerCompose(String title, DatabaseEnum database, Path project) throws IOException {
+    private void writeDockerCompose(String title,
+                                    DatabaseEnum database,
+                                    CacheSettings cache,
+                                    Path project) throws IOException {
+        String slug = StringUtils.toArtifactId(title);
         if (!database.hasDockerImage()) {
+            if (!cache.isEnabled()) {
+                return;
+            }
+            String content = "services:\n" + redisService(slug) + "\nvolumes:\n" + redisVolume();
+            fileUtils.writeFile(project + "/docker-compose.yml", content);
             return;
         }
         String template = fileUtils.getTemplateContent("/docker-compose-" + database.getKey() + ".yml.template");
-        String content = template.replace("PROJECT_SLUG", StringUtils.toArtifactId(title));
+        String content = template
+                .replace("PROJECT_SLUG", slug)
+                .replace("REDIS_SERVICE", cache.isEnabled() ? redisService(slug) : "")
+                .replace("REDIS_VOLUME", cache.isEnabled() ? redisVolume() : "");
         fileUtils.writeFile(project + "/docker-compose.yml", content);
+    }
+
+    private String redisService(String slug) {
+        return "  redis:\n"
+                + "    image: redis:7-alpine\n"
+                + "    container_name: " + slug + "-redis\n"
+                + "    ports:\n"
+                + "      - \"6379:6379\"\n"
+                + "    volumes:\n"
+                + "      - redis_data:/data\n";
+    }
+
+    private String redisVolume() {
+        return "  redis_data:";
     }
 
     private void writeDomainFile(Entity entity, DatabaseEnum database, Path project) throws IOException {
@@ -704,7 +813,10 @@ public class DomainService {
         fileUtils.writeFile(project + srcPath + "/domain/" + StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + ".java", newDomainFileContent);
     }
 
-    private void writeServiceFile(Entity entity, DatabaseEnum database, Path project) throws IOException {
+    private void writeServiceFile(Entity entity,
+                                  DatabaseEnum database,
+                                  CacheSettings cache,
+                                  Path project) throws IOException {
         if (entity.isEmbedded()) {
             return;
         }
@@ -742,6 +854,35 @@ public class DomainService {
             }
         });
 
+        String cacheName = StringUtils.transformToSnakeCase(entity.getEntityName());
+        String listCacheName = cacheName + "-list";
+        String cacheImports = "";
+        String cacheFindAll = "";
+        String cacheFindById = "";
+        String cacheSave = "";
+        String cacheEdit = "";
+        String cacheDelete = "";
+
+        if (cache.isEnabled()) {
+            cacheImports = "import org.springframework.cache.annotation.CacheEvict;\n"
+                    + "import org.springframework.cache.annotation.CachePut;\n"
+                    + "import org.springframework.cache.annotation.Cacheable;\n"
+                    + "import org.springframework.cache.annotation.Caching;\n";
+            cacheFindById = "@Cacheable(cacheNames = \"" + cacheName + "\", key = \"#id\")";
+            if (cache.isCacheFindAll()) {
+                cacheFindAll = "@Cacheable(cacheNames = \"" + listCacheName + "\", key = \"'all'\")";
+                cacheSave = "@Caching(put = @CachePut(cacheNames = \"" + cacheName + "\", key = \"#result.id\"), "
+                        + "evict = @CacheEvict(cacheNames = \"" + listCacheName + "\", allEntries = true))";
+                cacheEdit = cacheSave;
+                cacheDelete = "@Caching(evict = {@CacheEvict(cacheNames = \"" + cacheName + "\", key = \"#id\"), "
+                        + "@CacheEvict(cacheNames = \"" + listCacheName + "\", allEntries = true)})";
+            } else {
+                cacheSave = "@CachePut(cacheNames = \"" + cacheName + "\", key = \"#result.id\")";
+                cacheEdit = cacheSave;
+                cacheDelete = "@CacheEvict(cacheNames = \"" + cacheName + "\", key = \"#id\")";
+            }
+        }
+
         String newServiceFileContent = baseServiceFileContent.replace("SERVICE_DECLARATION", StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + "Service");
         newServiceFileContent = newServiceFileContent.replace("REPOSITORY_DECLARATION", StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + "Repository");
         newServiceFileContent = newServiceFileContent.replace("REPOSITORY", entity.getEntityName() + "Repository");
@@ -750,6 +891,12 @@ public class DomainService {
         newServiceFileContent = newServiceFileContent.replace("SAVE_EXTERNAL_ENTITIES", saveExternalEntities[0]);
         newServiceFileContent = newServiceFileContent.replace("EXTERNAL_ENTITIES_SERVICES", externalEntitiesServices[0]);
         newServiceFileContent = newServiceFileContent.replace("VALIDATIONS", validations[0]);
+        newServiceFileContent = newServiceFileContent.replace("CACHE_IMPORTS", cacheImports);
+        newServiceFileContent = newServiceFileContent.replace("CACHE_FIND_ALL", cacheFindAll);
+        newServiceFileContent = newServiceFileContent.replace("CACHE_FIND_BY_ID", cacheFindById);
+        newServiceFileContent = newServiceFileContent.replace("CACHE_SAVE", cacheSave);
+        newServiceFileContent = newServiceFileContent.replace("CACHE_EDIT", cacheEdit);
+        newServiceFileContent = newServiceFileContent.replace("CACHE_DELETE", cacheDelete);
 
         fileUtils.writeFile(project + srcPath + "/service/" + StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + "Service.java", newServiceFileContent);
     }

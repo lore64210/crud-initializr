@@ -12,5 +12,7 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
 
+REDIS_SERVICE
 volumes:
   mysql_data:
+REDIS_VOLUME

@@ -12,5 +12,7 @@ services:
     volumes:
       - mariadb_data:/var/lib/mysql
 
+REDIS_SERVICE
 volumes:
   mariadb_data:
+REDIS_VOLUME

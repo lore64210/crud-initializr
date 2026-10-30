@@ -20,6 +20,7 @@
 PERSISTENCE_DEPENDENCY
 		<!-- Base de datos: DATABASE_LABEL -->
 DATABASE_DEPENDENCY
+CACHE_DEPENDENCY
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>

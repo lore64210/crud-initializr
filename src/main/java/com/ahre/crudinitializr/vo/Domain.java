@@ -13,6 +13,7 @@ public class Domain {
     private String title;
     private DatabaseEnum database = DatabaseEnum.POSTGRESQL;
     private ApiEnum apiType = ApiEnum.REST;
+    private CacheSettings cache = new CacheSettings();
     private List<Entity> entities = new ArrayList<>();
 
 }

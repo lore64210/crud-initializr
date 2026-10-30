@@ -11,5 +11,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+REDIS_SERVICE
 volumes:
   postgres_data:
+REDIS_VOLUME
