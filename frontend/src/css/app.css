@@ -905,6 +905,46 @@ html {
   font-size: 0.78rem;
 }
 
+.database-selector--cache .MuiOutlinedInput-root {
+  background-color: #101613;
+  color: #eaf7e4;
+}
+
+.database-selector--cache .MuiOutlinedInput-notchedOutline {
+  border-color: rgba(109, 179, 63, 0.4);
+}
+
+.database-selector--cache
+  .MuiOutlinedInput-root:hover
+  .MuiOutlinedInput-notchedOutline,
+.database-selector--cache
+  .MuiOutlinedInput-root.Mui-focused
+  .MuiOutlinedInput-notchedOutline {
+  border-color: #80ea6e;
+}
+
+.database-selector--cache .MuiInputLabel-root {
+  color: #9bc98c;
+}
+
+.database-selector--cache .MuiInputLabel-root.Mui-focused {
+  color: #80ea6e;
+}
+
+.database-selector--cache .MuiFormHelperText-root {
+  color: #8fae86;
+}
+
+.database-selector--cache .MuiSwitch-switchBase:not(.Mui-checked) .MuiSwitch-thumb {
+  background-color: #9bc98c;
+}
+
+.database-selector--cache
+  .MuiSwitch-switchBase:not(.Mui-checked)
+  + .MuiSwitch-track {
+  background-color: rgba(155, 201, 140, 0.25);
+}
+
 /* ---- Advertencias de compatibilidad ---- */
 
 .compatibility-warning {
