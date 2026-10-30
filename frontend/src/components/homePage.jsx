@@ -856,6 +856,11 @@ function HomePage() {
                   bajo <code>/api/nombreEntidad</code>.
                 </li>
                 <li>
+                  <strong>Swagger UI</strong> en{" "}
+                  <code>/swagger-ui.html</code> y el contrato OpenAPI en{" "}
+                  <code>/v3/api-docs</code>.
+                </li>
+                <li>
                   Manejador global de errores para devolver HTTP 400 con el
                   detalle de la validación.
                 </li>

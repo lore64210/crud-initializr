@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "build": "webpack --mode=production --node-env=production",
+    "build:pages": "webpack --config webpack.pages.config.js --mode=production --node-env=production",
     "start": "react-scripts start",
     "watch": "webpack --watch --mode=development"
   },

@@ -1,0 +1,8 @@
+/bundle.js
+  Cache-Control: public, max-age=3600
+/css/app.css
+  Cache-Control: public, max-age=3600
+/favicon.ico
+  Cache-Control: public, max-age=86400
+/index.html
+  Cache-Control: public, max-age=0, must-revalidate

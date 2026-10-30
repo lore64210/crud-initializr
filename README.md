@@ -6,7 +6,7 @@ Creador de ABMs (CRUD) de Spring Boot. Desde una web en React se define el domin
 
 Cada proyecto se genera con una API REST (por defecto) o GraphQL, seleccionable desde la web:
 
-- **REST**: un controller por entidad con endpoints bajo `/api/nombreEntidad` y un manejador global de errores.
+- **REST**: un controller por entidad con endpoints bajo `/api/nombreEntidad`, un manejador global de errores y Swagger UI en `/swagger-ui.html` con el contrato OpenAPI en `/v3/api-docs`.
 - **GraphQL**: un controller por entidad, un esquema en `src/main/resources/graphql/schema.graphqls` y GraphiQL habilitado en `/graphiql`. Las queries son `findAll<Entidad>` y `find<Entidad>ById`, y las mutations `create<Entidad>`, `update<Entidad>` y `delete<Entidad>`.
 
 Los atributos simples soportados son `String`, `Integer`, `Long`, `Boolean`, `Date`, `DateTime`, `Time`, `Decimal`, `Double` y `UUID`. En GraphQL los tipos `Date`, `DateTime`, `Time`, `BigDecimal` y `UUID` se exponen como scalars propios, los ids como `ID`, `Long` como `Float` y las relaciones y composiciones con tipos de entrada anidados (`<Entidad>Input`).
@@ -52,8 +52,9 @@ En la carpeta `frontend` los comandos npm funcionan normalmente:
 ```bash
 cd frontend
 npm install
-npm start      # http://localhost:3000, con proxy a localhost:8080
-npm run build  # genera el bundle en target/classes/static/built
+npm start          # http://localhost:3000, con proxy a localhost:8080
+npm run build      # genera el bundle en target/classes/static/built
+npm run build:pages # genera frontend/dist para Cloudflare Pages
 ```
 
 Para que el backend sirva el frontend compilado hay que ejecutar `mvn clean install` (o `npm run build`) antes de arrancar el jar.
@@ -64,16 +65,16 @@ Para que el backend sirva el frontend compilado hay que ejecutar `mvn clean inst
 mvn test
 ```
 
-Incluye tests del generador (dominio, servicios, tests, esquema SQL, relaciones 1:1 y N:M, composiciones MongoDB, APIs REST/GraphQL y pom) y de las utilidades.
+Incluye tests del generador (dominio, servicios, tests, esquema SQL, relaciones 1:1 y N:M, composiciones MongoDB, APIs REST/GraphQL, Swagger/OpenAPI y pom) y de las utilidades.
 
 ## Deploy
 
-Para el despliegue subí la imagen de Docker a Docker Hub y desplegué en GCP:
+El frontend se despliega en **Cloudflare Pages** y el backend en **Cloud Run**.
 
-```bash
-docker build -t spring-crud-initializr .
-docker tag spring-crud-initializr lore64210/spring-crud-initializr
-docker push lore64210/spring-crud-initializr
-```
+El detalle de variables, secretos y workflows está en [`docs/deploy.md`](docs/deploy.md).
 
-Desplegado en Google Cloud Run. No se necesita subir la imagen al Artifact Registry: se puede usar Docker Hub directamente.
+- Frontend: `frontend`, build `npm run build:pages`, output `dist`.
+- Backend: Docker → Artifact Registry → Cloud Run.
+- GitHub Actions: `.github/workflows/deploy-backend.yml` y `.github/workflows/deploy-frontend.yml`.
+- CORS: `CorsConfig` permite `*.pages.dev` y `localhost:3000`.
+- No se usa volumen: la app es stateless.

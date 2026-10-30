@@ -1,5 +1,7 @@
 import { saveAs } from "file-saver";
 
+const API_BASE_URL = (process.env.REACT_APP_API_URL || "").replace(/\/+$/, "");
+
 export const formatStringToCamelCase = (value) => {
   const words = String(value ?? "")
     .normalize("NFD")
@@ -59,7 +61,7 @@ const createRequestBody = (data) => ({
 const service = {
   createProject: async (data) => {
     try {
-      const response = await fetch(`/api/domain`, {
+      const response = await fetch(`${API_BASE_URL}/api/domain`, {
         method: "POST",
         body: JSON.stringify(createRequestBody(data)),
         headers: { "Content-Type": "application/json" },

@@ -1,3 +1,4 @@
+const webpack = require("webpack");
 const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 const CssMinimizerPlugin = require("css-minimizer-webpack-plugin");
 const CopyPlugin = require("copy-webpack-plugin");
@@ -29,6 +30,11 @@ module.exports = (env, argv) => {
             to: "../target/classes/static/favicon.ico",
           },
         ],
+      }),
+      new webpack.DefinePlugin({
+        "process.env.REACT_APP_API_URL": JSON.stringify(
+          process.env.REACT_APP_API_URL || "",
+        ),
       }),
     ],
     module: {

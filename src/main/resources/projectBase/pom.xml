@@ -44,7 +44,7 @@ API_DEPENDENCY
 			<scope>test</scope>
 		</dependency>
 TEST_SUPPORT_DEPENDENCY
-REST_EXPLORER_DEPENDENCY
+API_DOCS_DEPENDENCY
 	</dependencies>
 
 	<build>

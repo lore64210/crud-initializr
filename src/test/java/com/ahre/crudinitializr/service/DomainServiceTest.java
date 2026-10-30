@@ -727,6 +727,7 @@ class DomainServiceTest {
         assertTrue(pom.contains("<artifactId>spring-boot-testcontainers</artifactId>"));
         assertTrue(pom.contains("<artifactId>testcontainers-mongodb</artifactId>"));
         assertTrue(pom.contains("<artifactId>testcontainers-junit-jupiter</artifactId>"));
+        assertTrue(pom.contains("<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>"));
         assertFalse(pom.contains("PERSISTENCE_DEPENDENCY"));
         assertFalse(pom.contains("DATABASE_DEPENDENCY"));
         assertFalse(pom.contains("TEST_SUPPORT_DEPENDENCY"));
@@ -759,12 +760,17 @@ class DomainServiceTest {
 
         String controller = Files.readString(project.resolve(
                 "src/main/java/com/example/projectBase/controller/PersonaController.java"));
-        assertTrue(controller.contains("@PathVariable String id"));
+        assertTrue(controller.contains("@Parameter(description = \"ID de Persona\") String id"));
+        assertTrue(controller.contains("@Tag(name = \"Persona\""));
+        assertTrue(controller.contains("@Operation(summary = \"Buscar Persona por id\")"));
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/config/OpenApiConfig.java")));
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("# Base de datos: MongoDB"));
         assertTrue(properties.contains("${MONGODB_URI:mongodb://localhost:27017/test}"));
         assertTrue(properties.contains("spring.data.mongodb.auto-index-creation=true"));
+        assertTrue(properties.contains("springdoc.swagger-ui.path=/swagger-ui.html"));
         assertFalse(properties.contains("spring.jpa"));
         assertFalse(properties.contains("spring.datasource"));
 
@@ -1017,15 +1023,31 @@ class DomainServiceTest {
 
         String pom = Files.readString(project.resolve("pom.xml"));
         assertFalse(pom.contains("spring-boot-starter-graphql"));
-        assertTrue(pom.contains("spring-data-rest-hal-explorer"));
+        assertFalse(pom.contains("spring-data-rest-hal-explorer"));
+        assertTrue(pom.contains("<artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>"));
+        assertTrue(pom.contains("<version>3.2.0</version>"));
         assertFalse(pom.contains("API_DEPENDENCY"));
-        assertFalse(pom.contains("REST_EXPLORER_DEPENDENCY"));
+        assertFalse(pom.contains("API_DOCS_DEPENDENCY"));
+
+        String openApiConfig = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/config/OpenApiConfig.java"));
+        assertTrue(openApiConfig.contains(".title(\"Mi Proyecto API\")"));
+
+        String personaController = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaController.java"));
+        assertTrue(personaController.contains("@Tag(name = \"Persona\""));
+        assertTrue(personaController.contains("@Operation(summary = \"Listar todas las entidades Persona\")"));
+        assertTrue(personaController.contains("@Parameter(description = \"ID de Persona\")"));
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertFalse(properties.contains("spring.graphql"));
+        assertTrue(properties.contains("springdoc.swagger-ui.path=/swagger-ui.html"));
+        assertTrue(properties.contains("springdoc.api-docs.path=/v3/api-docs"));
 
         String readme = Files.readString(project.resolve("README.md"));
-        assertTrue(readme.contains("La API REST queda disponible en `http://localhost:8080/api/...`."));
+        assertTrue(readme.contains("## API REST"));
+        assertTrue(readme.contains("http://localhost:8080/swagger-ui.html"));
+        assertTrue(readme.contains("http://localhost:8080/v3/api-docs"));
         assertFalse(readme.contains("API GraphQL"));
     }
 
@@ -1039,8 +1061,11 @@ class DomainServiceTest {
         String pom = Files.readString(project.resolve("pom.xml"));
         assertTrue(pom.contains("<artifactId>spring-boot-starter-graphql</artifactId>"));
         assertFalse(pom.contains("spring-data-rest-hal-explorer"));
+        assertFalse(pom.contains("springdoc-openapi-starter-webmvc-ui"));
         assertFalse(pom.contains("API_DEPENDENCY"));
-        assertFalse(pom.contains("REST_EXPLORER_DEPENDENCY"));
+        assertFalse(pom.contains("API_DOCS_DEPENDENCY"));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/config/OpenApiConfig.java")));
 
         String personaController = Files.readString(project.resolve(
                 "src/main/java/com/example/projectBase/controller/PersonaGraphQLController.java"));
@@ -1095,6 +1120,7 @@ class DomainServiceTest {
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("spring.graphql.graphiql.enabled=true"));
         assertTrue(properties.contains("spring.graphql.schema.printer.enabled=true"));
+        assertFalse(properties.contains("springdoc"));
 
         String readme = Files.readString(project.resolve("README.md"));
         assertTrue(readme.contains("## API GraphQL"));

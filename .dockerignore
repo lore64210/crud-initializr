@@ -1,0 +1,9 @@
+.git
+.gitignore
+.idea
+.vscode
+frontend/node_modules
+frontend/dist
+frontend/build
+target/*
+!target/*.jar

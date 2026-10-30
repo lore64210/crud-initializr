@@ -62,6 +62,7 @@ public class DomainService {
         try {
             project = fileUtils.createOutputFolder();
             writeStaticFiles(project, database, apiType);
+            writeOpenApiConfig(domain.getTitle(), apiType, project);
             writeProjectReadme(domain.getTitle(), database, apiType, project);
             writeDockerCompose(domain.getTitle(), database, project);
             writePomFile(domain.getTitle(), database, apiType, project);
@@ -418,6 +419,15 @@ public class DomainService {
         fileUtils.copyTemplate("/gitignore.template", project, ".gitignore");
     }
 
+    private void writeOpenApiConfig(String title, ApiEnum apiType, Path project) throws IOException {
+        if (apiType.isGraphQL()) {
+            return;
+        }
+        String template = fileUtils.getTemplateContent(srcPath + "/config/OpenApiConfig.java");
+        String content = template.replace("PROJECT_NAME", escapeJavaString(title.trim()));
+        fileUtils.writeFile(project + srcPath + "/config/OpenApiConfig.java", content);
+    }
+
     private String templatePath(DatabaseEnum database, String path) {
         return database.isDocument() ? "/mongo" + path : path;
     }
@@ -437,9 +447,9 @@ public class DomainService {
         content = content.replace("API_DEPENDENCY", apiType.isGraphQL()
                 ? renderDependency("org.springframework.boot", "spring-boot-starter-graphql", null)
                 : "");
-        content = content.replace("REST_EXPLORER_DEPENDENCY", apiType.isGraphQL()
+        content = content.replace("API_DOCS_DEPENDENCY", apiType.isGraphQL()
                 ? ""
-                : renderDependency("org.springframework.data", "spring-data-rest-hal-explorer", null));
+                : renderDependency("org.springdoc", "springdoc-openapi-starter-webmvc-ui", "3.2.0", null));
         if (database.isDocument()) {
             content = content.replace("DATABASE_DEPENDENCY", "");
             content = content.replace("TEST_SUPPORT_DEPENDENCY", renderMongoTestDependencies());
@@ -475,10 +485,16 @@ public class DomainService {
     }
 
     private String renderDependency(String groupId, String artifactId, String scope) {
+        return renderDependency(groupId, artifactId, null, scope);
+    }
+
+    private String renderDependency(String groupId, String artifactId, String version, String scope) {
         String scopeLine = scope == null ? "" : "\t\t\t<scope>" + scope + "</scope>\n";
+        String versionLine = version == null ? "" : "\t\t\t<version>" + version + "</version>\n";
         return "\t\t<dependency>\n"
                 + "\t\t\t<groupId>" + groupId + "</groupId>\n"
                 + "\t\t\t<artifactId>" + artifactId + "</artifactId>\n"
+                + versionLine
                 + scopeLine
                 + "\t\t</dependency>";
     }
@@ -489,7 +505,8 @@ public class DomainService {
             String content = template
                     .replace("DATABASE_LABEL", database.getLabel())
                     .replace("DATABASE_URL", "${MONGODB_URI:" + database.getJdbcUrl() + "}")
-                    .replace("GRAPHQL_PROPERTIES", graphQlProperties(apiType));
+                    .replace("GRAPHQL_PROPERTIES", graphQlProperties(apiType))
+                    .replace("API_DOCS_PROPERTIES", apiDocsProperties(apiType));
             fileUtils.writeFile(project + "/src/main/resources/application.properties", content);
             return;
         }
@@ -501,7 +518,8 @@ public class DomainService {
                 .replace("DATABASE_USERNAME", "${DB_USER:" + database.getUsername() + "}")
                 .replace("DATABASE_PASSWORD", "${DB_PASSWORD:" + database.getPassword() + "}")
                 .replace("DATABASE_EXTRA_PROPERTIES", extraProperties(database))
-                .replace("GRAPHQL_PROPERTIES", graphQlProperties(apiType));
+                .replace("GRAPHQL_PROPERTIES", graphQlProperties(apiType))
+                .replace("API_DOCS_PROPERTIES", apiDocsProperties(apiType));
         fileUtils.writeFile(project + "/src/main/resources/application.properties", content);
     }
 
@@ -510,6 +528,15 @@ public class DomainService {
             return "";
         }
         return "\n# GraphQL\nspring.graphql.graphiql.enabled=true\nspring.graphql.schema.printer.enabled=true\n";
+    }
+
+    private String apiDocsProperties(ApiEnum apiType) {
+        if (apiType.isGraphQL()) {
+            return "";
+        }
+        return "\n# OpenAPI / Swagger UI\n"
+                + "springdoc.swagger-ui.path=/swagger-ui.html\n"
+                + "springdoc.api-docs.path=/v3/api-docs\n";
     }
 
     private String extraProperties(DatabaseEnum database) {
@@ -557,7 +584,12 @@ public class DomainService {
 
     private String apiSection(ApiEnum apiType) {
         if (!apiType.isGraphQL()) {
-            return "";
+            return "## API REST\n\n"
+                    + "La API REST expone un controller por entidad bajo `/api/nombreEntidad`.\n\n"
+                    + "- Swagger UI: `http://localhost:8080/swagger-ui.html`\n"
+                    + "- OpenAPI JSON: `http://localhost:8080/v3/api-docs`\n"
+                    + "- OpenAPI YAML: `http://localhost:8080/v3/api-docs.yaml`\n\n"
+                    + "Swagger UI permite explorar y probar los endpoints generados sin escribir las peticiones HTTP a mano.\n";
         }
         return "## API GraphQL\n\n"
                 + "El proyecto expone la API en `http://localhost:8080/graphql`. El esquema está en "
@@ -573,7 +605,8 @@ public class DomainService {
         if (apiType.isGraphQL()) {
             return "La API GraphQL queda disponible en `http://localhost:8080/graphql`.";
         }
-        return "La API REST queda disponible en `http://localhost:8080/api/...`.";
+        return "La API REST queda disponible en `http://localhost:8080/api/...`.\n\n"
+                + "La documentación interactiva está en `http://localhost:8080/swagger-ui.html`.";
     }
 
     private String h2RunInstructions() {
@@ -1420,6 +1453,14 @@ public class DomainService {
         newTestFile = newTestFile.replace("SERVICE", entity.getEntityName() + "Service");
 
         fileUtils.writeFile(project + testPath + "/tests/service/" + domainEntity + "ServiceTest.java", newTestFile);
+    }
+
+    private String escapeJavaString(String value) {
+        return value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\r", "\\r")
+                .replace("\n", "\\n");
     }
 
     private static boolean isJavaIdentifier(String value) {
