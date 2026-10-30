@@ -1145,6 +1145,57 @@ class DomainServiceTest {
     }
 
     @Test
+    void processDomain_withCacheEnabledAndEntityOptedOut_onlyAnnotatesSelectedEntities() throws IOException {
+        Domain domain = flatDomain();
+        domain.getCache().setEnabled(true);
+        domain.getEntities().get(0).setCacheEnabled(false);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String personaService = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PersonaService.java"));
+        assertFalse(personaService.contains("@Cacheable"));
+        assertFalse(personaService.contains("@CachePut"));
+        assertFalse(personaService.contains("@CacheEvict"));
+
+        String pedidoService = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PedidoService.java"));
+        assertTrue(pedidoService.contains("@Cacheable(cacheNames = \"pedido\", key = \"#id\")"));
+        assertTrue(pedidoService.contains("@CachePut(cacheNames = \"pedido\", key = \"#result.id\")"));
+
+        String readme = Files.readString(project.resolve("README.md"));
+        assertTrue(readme.contains("Entidades cacheadas: `pedido`"));
+        assertFalse(readme.contains("Entidades cacheadas: `persona`"));
+    }
+
+    @Test
+    void processDomain_withCacheEnabledAndNoCachedEntities_throwsClearError() {
+        Domain domain = flatDomain();
+        domain.getCache().setEnabled(true);
+        domain.getEntities().forEach(entity -> entity.setCacheEnabled(false));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("al menos una entidad"));
+    }
+
+    @Test
+    void processDomain_withCacheEnabledAndEmbeddedEntitiesOnly_throwsClearError() {
+        Domain domain = mongoCompositionDomain();
+        domain.setDatabase(DatabaseEnum.MONGODB);
+        domain.getCache().setEnabled(true);
+        domain.getEntities().stream()
+                .filter(entity -> !entity.isEmbedded())
+                .forEach(entity -> entity.setCacheEnabled(false));
+
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> domainService.processDomain(domain));
+
+        assertTrue(exception.getMessage().contains("al menos una entidad"));
+    }
+
+    @Test
     void processDomain_withGraphql_generatesGraphqlControllersSchemaAndConfiguration() throws IOException {
         Domain domain = validDomain();
         domain.setApiType(ApiEnum.GRAPHQL);

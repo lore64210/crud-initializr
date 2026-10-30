@@ -18,8 +18,10 @@ const EntityForm = ({
   entities,
   database,
   documentMode = false,
+  cacheEnabled = false,
   onChangeEntityName,
   onChangeEmbedded,
+  onChangeCacheEnabled,
   onChangeAttribute,
   onAddAttribute,
   onDeleteAttribute,
@@ -63,6 +65,28 @@ const EntityForm = ({
             {entity.embedded
               ? "Se guarda dentro de otra entidad: no genera colección ni API propia."
               : "Entidad raíz: genera colección, repository, service y controller."}
+          </Typography>
+        </div>
+      )}
+
+      {cacheEnabled && !entity.embedded && (
+        <div className="entity-cache-toggle">
+          <FormControlLabel
+            control={
+              <Switch
+                color="success"
+                checked={entity.cacheEnabled !== false}
+                onChange={({ target: { checked } }) =>
+                  onChangeCacheEnabled?.(checked)
+                }
+              />
+            }
+            label="Cachear esta entidad"
+          />
+          <Typography variant="body2" color="text.secondary">
+            {entity.cacheEnabled !== false
+              ? "Sus endpoints usan Redis para las lecturas y las escrituras invalidan el cache."
+              : "Sus endpoints no usan cache: siempre consultan la base de datos."}
           </Typography>
         </div>
       )}

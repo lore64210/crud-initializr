@@ -8,8 +8,12 @@ import {
 import CachedIcon from "@mui/icons-material/Cached";
 import "../css/app.css";
 
-const CacheSettings = ({ value, onChange }) => {
+const CacheSettings = ({ value, onChange, entities = [], onToggleEntity }) => {
   const update = (patch) => onChange({ ...value, ...patch });
+  const rootEntities = entities.filter((entity) => !entity.embedded);
+  const cachedCount = rootEntities.filter(
+    (entity) => entity.cacheEnabled !== false,
+  ).length;
 
   return (
     <div className="database-selector database-selector--cache">
@@ -79,9 +83,47 @@ const CacheSettings = ({ value, onChange }) => {
             />
           </div>
 
+          <div className="cache-settings__entities">
+            <div className="cache-settings__entities-header">
+              <Typography className="cache-settings__entities-title">
+                Entidades a cachear
+              </Typography>
+              <Typography className="cache-settings__entities-count">
+                {cachedCount} de {rootEntities.length}
+              </Typography>
+            </div>
+
+            {rootEntities.length === 0 ? (
+              <Typography className="database-selector__note">
+                Agregá al menos una entidad para poder cachearla.
+              </Typography>
+            ) : (
+              <div className="cache-settings__entity-list">
+                {rootEntities.map((entity) => (
+                  <FormControlLabel
+                    key={entity.uuid}
+                    className="cache-settings__entity"
+                    control={
+                      <Switch
+                        size="small"
+                        color="success"
+                        checked={entity.cacheEnabled !== false}
+                        onChange={({ target: { checked } }) =>
+                          onToggleEntity?.(entity.uuid, checked)
+                        }
+                      />
+                    }
+                    label={entity.entityName.trim() || "Entidad sin nombre"}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+
           <Typography className="database-selector__note">
-            findById se cachea siempre. Las escrituras actualizan o invalidan el
-            cache. Los tests generados usan cache deshabilitado.
+            findById se cachea siempre en las entidades seleccionadas. Las
+            escrituras actualizan o invalidan el cache. Los tests generados usan
+            cache deshabilitado.
           </Typography>
         </>
       )}

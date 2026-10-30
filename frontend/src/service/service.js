@@ -60,6 +60,7 @@ const createRequestBody = (data) => ({
       entityName: formatStringToCamelCase(entity.entityName),
       attributes,
       embedded: !!entity.embedded,
+      cacheEnabled: entity.cacheEnabled !== false,
     };
   }),
 });

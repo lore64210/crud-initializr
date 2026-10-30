@@ -24,6 +24,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class DomainService {
@@ -59,7 +60,7 @@ public class DomainService {
         CacheSettings cache = domain.getCache() == null ? new CacheSettings() : domain.getCache();
         validateDatabaseCompatibility(domain, database);
         validateApiCompatibility(domain, apiType);
-        validateCacheSettings(cache);
+        validateCacheSettings(domain, cache);
 
         Path project = null;
         try {
@@ -67,7 +68,7 @@ public class DomainService {
             writeStaticFiles(project, database, apiType);
             writeOpenApiConfig(domain.getTitle(), apiType, project);
             writeCacheConfig(cache, project);
-            writeProjectReadme(domain.getTitle(), database, apiType, cache, project);
+            writeProjectReadme(domain.getTitle(), domain, database, apiType, cache, project);
             writeDockerCompose(domain.getTitle(), database, cache, project);
             writePomFile(domain.getTitle(), database, apiType, cache, project);
             writeApplicationProperties(database, apiType, cache, project);
@@ -264,7 +265,7 @@ public class DomainService {
                 "El proyecto debe tener al menos una entidad raíz para generar una API GraphQL");
     }
 
-    private void validateCacheSettings(CacheSettings cache) {
+    private void validateCacheSettings(Domain domain, CacheSettings cache) {
         if (!cache.isEnabled()) {
             return;
         }
@@ -281,6 +282,9 @@ public class DomainService {
                 "El TTL de Redis debe ser mayor que cero");
         Assert.isTrue(cache.getTtlSeconds() <= 31_536_000,
                 "El TTL de Redis no puede superar un año");
+        Assert.isTrue(domain.getEntities().stream()
+                        .anyMatch(entity -> !entity.isEmbedded() && entity.isCacheEnabled()),
+                "Seleccioná al menos una entidad para cachear o deshabilitá el cache Redis");
         cache.setPrefix(prefix);
     }
 
@@ -612,6 +616,7 @@ public class DomainService {
     }
 
     private void writeProjectReadme(String title,
+                                    Domain domain,
                                     DatabaseEnum database,
                                     ApiEnum apiType,
                                     CacheSettings cache,
@@ -623,7 +628,7 @@ public class DomainService {
                     .replace("DATABASE_LABEL", database.getLabel())
                     .replace("DATABASE_URL", database.getJdbcUrl())
                     .replace("API_SECTION", apiSection(apiType))
-                    .replace("CACHE_SECTION", cacheSection(cache))
+                    .replace("CACHE_SECTION", cacheSection(domain, cache))
                     .replace("API_RUN_INSTRUCTIONS", apiRunInstructions(apiType));
             fileUtils.writeFile(project + "/README.md", content);
             return;
@@ -646,18 +651,23 @@ public class DomainService {
                 .replace("DATABASE_PASSWORD", database.getPassword())
                 .replace("DATABASE_RUN_INSTRUCTIONS", runInstructions)
                 .replace("API_SECTION", apiSection(apiType))
-                .replace("CACHE_SECTION", cacheSection(cache))
+                .replace("CACHE_SECTION", cacheSection(domain, cache))
                 .replace("API_RUN_INSTRUCTIONS", apiRunInstructions(apiType));
         fileUtils.writeFile(project + "/README.md", content);
     }
 
-    private String cacheSection(CacheSettings cache) {
+    private String cacheSection(Domain domain, CacheSettings cache) {
         if (!cache.isEnabled()) {
             return "";
         }
+        String cachedEntities = domain.getEntities().stream()
+                .filter(entity -> !entity.isEmbedded() && entity.isCacheEnabled())
+                .map(entity -> "`" + entity.getEntityName() + "`")
+                .collect(Collectors.joining(", "));
         return "## Cache Redis\n\n"
                 + "El proyecto incluye cache Redis con prefijo `" + cache.getPrefix()
                 + "` y TTL de " + cache.getTtlSeconds() + " segundos.\n\n"
+                + "- Entidades cacheadas: " + cachedEntities + ".\n"
                 + "- `findById` se cachea siempre.\n"
                 + (cache.isCacheFindAll() ? "- `findAll` también se cachea.\n" : "- `findAll` no se cachea.\n")
                 + "- `save`, `edit` y `delete` invalidan o actualizan el cache.\n\n"
@@ -863,7 +873,7 @@ public class DomainService {
         String cacheEdit = "";
         String cacheDelete = "";
 
-        if (cache.isEnabled()) {
+        if (cache.isEnabled() && entity.isCacheEnabled()) {
             cacheImports = "import org.springframework.cache.annotation.CacheEvict;\n"
                     + "import org.springframework.cache.annotation.CachePut;\n"
                     + "import org.springframework.cache.annotation.Cacheable;\n"

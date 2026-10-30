@@ -945,6 +945,57 @@ html {
   background-color: rgba(155, 201, 140, 0.25);
 }
 
+.cache-settings__entities {
+  margin-top: 0.9em;
+}
+
+.cache-settings__entities-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1em;
+}
+
+.cache-settings__entities-title {
+  color: #d8ecd0 !important;
+  font-size: 0.78rem !important;
+}
+
+.cache-settings__entities-count {
+  color: #8fae86 !important;
+  font-size: 0.68rem !important;
+}
+
+.cache-settings__entity-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15em 1.25em;
+  margin-top: 0.15em;
+}
+
+.cache-settings__entity {
+  margin-right: 0 !important;
+}
+
+.cache-settings__entity .MuiFormControlLabel-label {
+  color: #cfe4c6;
+  font-size: 0.78rem;
+}
+
+.entity-cache-toggle {
+  margin-top: 0.75em;
+}
+
+.entity-cache-toggle .MuiFormControlLabel-label {
+  color: #cfe4c6;
+  font-size: 0.8rem;
+}
+
+.entity-cache-toggle .MuiTypography-root {
+  color: #8fae86;
+  font-size: 0.72rem;
+}
+
 /* ---- Advertencias de compatibilidad ---- */
 
 .compatibility-warning {

@@ -28,6 +28,10 @@ En SQL se soportan relaciones N:1 (`CUSTOM`), 1:N (`CUSTOM_LIST`), 1:1 (`CUSTOM_
 
 Los tests de los proyectos SQL usan H2 en memoria, sin necesidad de Docker. Los tests de MongoDB usan Testcontainers y requieren Docker.
 
+## Cache Redis
+
+El cache es opcional por proyecto: se habilita desde el initializr y se elige qué entidades se cachean (por defecto, todas). El proyecto generado incluye `spring-boot-starter-data-redis`, un `CacheConfig` con TTL y prefijo de claves configurable, y anotaciones `@Cacheable`/`@CachePut`/`@CacheEvict` en los services de las entidades seleccionadas. Las escrituras actualizan o invalidan el cache y, si Redis no responde, la API sigue funcionando sin cache. Redis se agrega al `docker-compose.yml` del proyecto y los tests generados corren con cache deshabilitado.
+
 ## Requisitos
 
 - Java 17

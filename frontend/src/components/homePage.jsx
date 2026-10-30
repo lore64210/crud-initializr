@@ -61,6 +61,7 @@ const createEmptyEntity = () => ({
   entityName: "",
   attributes: [createEmptyAttribute()],
   embedded: false,
+  cacheEnabled: true,
 });
 
 const warningMessage =
@@ -198,6 +199,15 @@ const validateForm = (businessName, entities, database, cache) => {
           return `La composición "${attribute.name}" de "${entity.entityName}" solo es válida para MongoDB.`;
         }
       }
+    }
+  }
+
+  if (cache?.enabled) {
+    const cacheableCount = entities.filter(
+      (entity) => !entity.embedded && entity.cacheEnabled !== false,
+    ).length;
+    if (cacheableCount === 0) {
+      return "Seleccioná al menos una entidad para cachear o deshabilitá el cache Redis";
     }
   }
 
@@ -402,6 +412,14 @@ function HomePage() {
     );
   };
 
+  const changeEntityCache = (entityUuid, cacheEnabled) => {
+    setEntities((current) =>
+      current.map((entity) =>
+        entity.uuid === entityUuid ? { ...entity, cacheEnabled } : entity,
+      ),
+    );
+  };
+
   const deleteEntity = (entityUuid) => {
     setEntities((current) => {
       const deletedEntity = current.find((entity) => entity.uuid === entityUuid);
@@ -570,7 +588,12 @@ function HomePage() {
         }
       />
       <ApiSelector value={apiType} onChange={setApiType} />
-      <CacheSettings value={cache} onChange={setCache} />
+      <CacheSettings
+        value={cache}
+        onChange={setCache}
+        entities={entities}
+        onToggleEntity={changeEntityCache}
+      />
       <div className="workspace">
         <div className="workspace__graph">
           <RelationshipGraphPanel
@@ -621,6 +644,10 @@ function HomePage() {
                 }
                 onChangeEmbedded={(embedded) =>
                   changeEmbedded(selectedEntity.uuid, embedded)
+                }
+                cacheEnabled={cache.enabled}
+                onChangeCacheEnabled={(cacheEnabled) =>
+                  changeEntityCache(selectedEntity.uuid, cacheEnabled)
                 }
                 onChangeAttribute={(attribute) =>
                   changeAttribute(selectedEntity.uuid, attribute)
