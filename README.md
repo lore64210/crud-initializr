@@ -32,6 +32,10 @@ Los tests de los proyectos SQL usan H2 en memoria, sin necesidad de Docker. Los 
 
 El cache es opcional por proyecto: se habilita desde el initializr y se elige qué entidades se cachean (por defecto, todas). El proyecto generado incluye `spring-boot-starter-data-redis`, un `CacheConfig` con TTL y prefijo de claves configurable, y anotaciones `@Cacheable`/`@CachePut`/`@CacheEvict` en los services de las entidades seleccionadas. Las escrituras actualizan o invalidan el cache y, si Redis no responde, la API sigue funcionando sin cache. Redis se agrega al `docker-compose.yml` del proyecto y los tests generados corren con cache deshabilitado.
 
+## Proyectos guardados
+
+Desde el header se puede abrir un drawer con los proyectos guardados en el `localStorage` del navegador. Cada proyecto conserva nombre, entidades, base de datos, tipo de API y configuración de Redis. Al abrir uno se puede guardar o descartar el trabajo actual; si el proyecto no tiene nombre, se pide uno antes de guardarlo. Los proyectos quedan solo en ese navegador: no se sincronizan entre dispositivos.
+
 ## Requisitos
 
 - Java 17

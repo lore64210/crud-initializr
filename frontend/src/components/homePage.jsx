@@ -3,8 +3,16 @@ import EntityForm from "../components/EntityForm";
 import DatabaseSelector from "../components/DatabaseSelector";
 import ApiSelector from "../components/ApiSelector";
 import CacheSettings from "../components/CacheSettings";
+import ProjectsDrawer from "../components/ProjectsDrawer";
+import SaveProjectDialog from "../components/SaveProjectDialog";
+import OpenProjectDialog from "../components/OpenProjectDialog";
 import { RelationshipGraphPanel } from "../components/RelationshipGraph";
 import service, { formatStringToCamelCase } from "../service/service";
+import {
+  deleteProject,
+  listProjects,
+  saveProject,
+} from "../service/projectStorage";
 import uuid from "react-uuid";
 import {
   Snackbar,
@@ -19,11 +27,14 @@ import {
   DialogContent,
   DialogTitle,
   Fab,
+  Badge,
 } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
 import DownloadIcon from "@mui/icons-material/Download";
+import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
+import SaveIcon from "@mui/icons-material/Save";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 
 import "../css/app.css";
@@ -55,6 +66,13 @@ const isListType = (type) =>
   type === "COMPOSITION_LIST";
 const isNumericType = (type) =>
   ["INTEGER", "LONG", "DECIMAL", "DOUBLE"].includes(type);
+
+const createDefaultCache = () => ({
+  enabled: false,
+  prefix: "crud",
+  ttlSeconds: 600,
+  cacheFindAll: false,
+});
 
 const createEmptyEntity = () => ({
   uuid: uuid(),
@@ -225,12 +243,14 @@ function HomePage() {
   const [loading, setLoading] = useState(false);
   const [database, setDatabase] = useState("POSTGRESQL");
   const [apiType, setApiType] = useState("REST");
-  const [cache, setCache] = useState({
-    enabled: false,
-    prefix: "crud",
-    ttlSeconds: 600,
-    cacheFindAll: false,
-  });
+  const [cache, setCache] = useState(createDefaultCache);
+  const [savedProjects, setSavedProjects] = useState(() => listProjects());
+  const [currentProjectId, setCurrentProjectId] = useState(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [openProjectDialog, setOpenProjectDialog] = useState(null);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
+  const [pendingAfterSave, setPendingAfterSave] = useState(null);
+  const [saveFeedback, setSaveFeedback] = useState("");
   const [helpOpen, setHelpOpen] = useState(false);
   const [mongoWarningOpen, setMongoWarningOpen] = useState(false);
   const [sqlWarningOpen, setSqlWarningOpen] = useState(false);
@@ -490,6 +510,154 @@ function HomePage() {
     );
   };
 
+  const persistCurrentProject = (name) => {
+    const trimmed = String(name || "").trim();
+    if (!trimmed) {
+      return false;
+    }
+
+    try {
+      const { project, projects } = saveProject({
+        id: currentProjectId || undefined,
+        name: trimmed,
+        database,
+        apiType,
+        cache,
+        entities,
+      });
+      setSavedProjects(projects);
+      setCurrentProjectId(project.id);
+      setBusinessName(project.name);
+      setSaveFeedback(`Proyecto «${project.name}» guardado`);
+      return true;
+    } catch {
+      setErrorMessage("No se pudo guardar el proyecto en este navegador");
+      return false;
+    }
+  };
+
+  const loadProject = (project) => {
+    const loadedEntities =
+      project.entities.length > 0
+        ? JSON.parse(JSON.stringify(project.entities))
+        : [createEmptyEntity()];
+
+    setBusinessName(project.name);
+    setDatabase(project.database || "POSTGRESQL");
+    setApiType(project.apiType || "REST");
+    setCache({ ...createDefaultCache(), ...(project.cache || {}) });
+    setEntities(loadedEntities);
+    setSelectedEntityUuid(loadedEntities[0]?.uuid ?? null);
+    setCurrentProjectId(project.id);
+    setDrawerOpen(false);
+    setErrorMessage("");
+    setProjectDownloaded(false);
+  };
+
+  const startNewProject = () => {
+    const emptyEntity = createEmptyEntity();
+
+    setBusinessName("");
+    setEntities([emptyEntity]);
+    setSelectedEntityUuid(emptyEntity.uuid);
+    setDatabase("POSTGRESQL");
+    setApiType("REST");
+    setCache(createDefaultCache());
+    setCurrentProjectId(null);
+    setDrawerOpen(false);
+    setErrorMessage("");
+    setProjectDownloaded(false);
+    setPendingDatabase(null);
+    setMongoWarningOpen(false);
+    setSqlWarningOpen(false);
+  };
+
+  const handleSaveClick = () => {
+    if (!businessName.trim()) {
+      setPendingAfterSave(null);
+      setSaveDialogOpen(true);
+      return;
+    }
+    persistCurrentProject(businessName);
+  };
+
+  const handleSaveDialogConfirm = (name) => {
+    if (!persistCurrentProject(name)) {
+      return;
+    }
+
+    setSaveDialogOpen(false);
+    const pending = pendingAfterSave;
+    setPendingAfterSave(null);
+
+    if (pending) {
+      setOpenProjectDialog(null);
+      if (pending.project) {
+        loadProject(pending.project);
+      } else {
+        startNewProject();
+      }
+    }
+  };
+
+  const cancelSaveDialog = () => {
+    setSaveDialogOpen(false);
+    setPendingAfterSave(null);
+  };
+
+  const requestOpenProject = (project) => {
+    setOpenProjectDialog({ project });
+  };
+
+  const requestNewProject = () => {
+    setDrawerOpen(false);
+    setOpenProjectDialog({ project: null });
+  };
+
+  const handleDiscardAndContinue = () => {
+    const target = openProjectDialog?.project ?? null;
+    setOpenProjectDialog(null);
+    if (target) {
+      loadProject(target);
+    } else {
+      startNewProject();
+    }
+  };
+
+  const handleSaveAndContinue = () => {
+    const target = openProjectDialog?.project ?? null;
+
+    if (!businessName.trim()) {
+      setPendingAfterSave({ project: target });
+      setOpenProjectDialog(null);
+      setSaveDialogOpen(true);
+      return;
+    }
+
+    if (!persistCurrentProject(businessName)) {
+      return;
+    }
+
+    setOpenProjectDialog(null);
+    if (target) {
+      loadProject(target);
+    } else {
+      startNewProject();
+    }
+  };
+
+  const handleDeleteProject = (projectId) => {
+    try {
+      setSavedProjects(deleteProject(projectId));
+      if (currentProjectId === projectId) {
+        setCurrentProjectId(null);
+      }
+      setSaveFeedback("Proyecto eliminado");
+    } catch {
+      setErrorMessage("No se pudo eliminar el proyecto");
+    }
+  };
+
   const submit = async () => {
     const validationError = validateForm(businessName, entities, database, cache);
     if (validationError) {
@@ -519,21 +687,39 @@ function HomePage() {
     <div className="main">
       <div className="header-container">
         <div className="header">
-          <div className="brand">
-            <span className="brand__logo">
-              <img
-                src="/favicon.ico"
-                alt="spring-logo"
-                className="spring-logo"
-              />
-            </span>
-            <div className="brand__titles">
-              <Typography variant="h4" className="title">
-                Spring CRUD Initializr
-              </Typography>
-              <span className="brand__subtitle">
-                Proyecto personal de Lorenzo Lopez
+          <div className="header__left">
+            <Tooltip title="Proyectos guardados" arrow>
+              <IconButton
+                className="header__projects-button"
+                aria-label="Abrir proyectos guardados"
+                onClick={() => setDrawerOpen(true)}
+              >
+                <Badge
+                  badgeContent={savedProjects.length}
+                  color="success"
+                  overlap="circular"
+                  invisible={savedProjects.length === 0}
+                >
+                  <FolderOpenIcon />
+                </Badge>
+              </IconButton>
+            </Tooltip>
+            <div className="brand">
+              <span className="brand__logo">
+                <img
+                  src="/favicon.ico"
+                  alt="spring-logo"
+                  className="spring-logo"
+                />
               </span>
+              <div className="brand__titles">
+                <Typography variant="h4" className="title">
+                  Spring CRUD Initializr
+                </Typography>
+                <span className="brand__subtitle">
+                  Proyecto personal de Lorenzo Lopez
+                </span>
+              </div>
             </div>
           </div>
           <span className="header__badge">Spring Boot v4.1.2</span>
@@ -567,6 +753,17 @@ function HomePage() {
                 {loading ? "Creando proyecto..." : "Crear proyecto"}
               </Button>
             </span>
+          </Tooltip>
+          <Tooltip title="Guardar el proyecto en este navegador" arrow>
+            <Button
+              className="save-project-button"
+              variant="outlined"
+              color="success"
+              startIcon={<SaveIcon />}
+              onClick={handleSaveClick}
+            >
+              Guardar
+            </Button>
           </Tooltip>
         </div>
       </div>
@@ -1014,6 +1211,47 @@ function HomePage() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ProjectsDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        projects={savedProjects}
+        currentProjectId={currentProjectId}
+        onOpenProject={requestOpenProject}
+        onDeleteProject={handleDeleteProject}
+        onNewProject={requestNewProject}
+      />
+
+      <OpenProjectDialog
+        open={!!openProjectDialog}
+        project={openProjectDialog?.project ?? null}
+        currentName={businessName}
+        onCancel={() => setOpenProjectDialog(null)}
+        onDiscard={handleDiscardAndContinue}
+        onSaveAndContinue={handleSaveAndContinue}
+      />
+
+      <SaveProjectDialog
+        open={saveDialogOpen}
+        initialName={businessName}
+        description={
+          pendingAfterSave
+            ? "Para abrir el proyecto elegido primero guardá el trabajo actual con un nombre."
+            : "Guardá el trabajo actual para poder retomarlo después."
+        }
+        onCancel={cancelSaveDialog}
+        onConfirm={handleSaveDialogConfirm}
+      />
+
+      <Snackbar
+        open={!!saveFeedback.length}
+        autoHideDuration={3000}
+        onClose={() => setSaveFeedback("")}
+      >
+        <Alert severity="success" sx={{ width: "100%" }}>
+          {saveFeedback}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }
