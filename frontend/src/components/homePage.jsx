@@ -687,39 +687,21 @@ function HomePage() {
     <div className="main">
       <div className="header-container">
         <div className="header">
-          <div className="header__left">
-            <Tooltip title="Proyectos guardados" arrow>
-              <IconButton
-                className="header__projects-button"
-                aria-label="Abrir proyectos guardados"
-                onClick={() => setDrawerOpen(true)}
-              >
-                <Badge
-                  badgeContent={savedProjects.length}
-                  color="success"
-                  overlap="circular"
-                  invisible={savedProjects.length === 0}
-                >
-                  <FolderOpenIcon />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-            <div className="brand">
-              <span className="brand__logo">
-                <img
-                  src="/favicon.ico"
-                  alt="spring-logo"
-                  className="spring-logo"
-                />
+          <div className="brand">
+            <span className="brand__logo">
+              <img
+                src="/favicon.ico"
+                alt="spring-logo"
+                className="spring-logo"
+              />
+            </span>
+            <div className="brand__titles">
+              <Typography variant="h4" className="title">
+                Spring CRUD Initializr
+              </Typography>
+              <span className="brand__subtitle">
+                Proyecto personal de Lorenzo Lopez
               </span>
-              <div className="brand__titles">
-                <Typography variant="h4" className="title">
-                  Spring CRUD Initializr
-                </Typography>
-                <span className="brand__subtitle">
-                  Proyecto personal de Lorenzo Lopez
-                </span>
-              </div>
             </div>
           </div>
           <span className="header__badge">Spring Boot v4.1.2</span>
@@ -727,6 +709,22 @@ function HomePage() {
       </div>
       <div className="bussines-name-input-container">
         <div className="project-bar">
+          <Tooltip title="Proyectos guardados" arrow>
+            <IconButton
+              className="project-bar__projects-button"
+              aria-label="Abrir proyectos guardados"
+              onClick={() => setDrawerOpen(true)}
+            >
+              <Badge
+                badgeContent={savedProjects.length}
+                color="success"
+                overlap="circular"
+                invisible={savedProjects.length === 0}
+              >
+                <FolderOpenIcon />
+              </Badge>
+            </IconButton>
+          </Tooltip>
           <TextField
             color="success"
             className="input project-name-input"

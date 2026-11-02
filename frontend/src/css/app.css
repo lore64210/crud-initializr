@@ -1891,6 +1891,10 @@ html {
     gap: 0.6em;
   }
 
+  .project-bar__projects-button {
+    align-self: flex-start;
+  }
+
   .create-project-button {
     width: 100%;
     justify-content: center;
@@ -1955,28 +1959,21 @@ html {
 
 /* ---- Proyectos guardados ---- */
 
-.header__left {
-  display: flex;
-  align-items: center;
-  gap: 0.75em;
-  min-width: 0;
-}
-
-.header__projects-button {
+.project-bar__projects-button {
   flex-shrink: 0;
-  width: 42px !important;
-  height: 42px !important;
+  width: 40px !important;
+  height: 40px !important;
   color: #b9f5ae !important;
   border: 1px solid rgba(109, 179, 63, 0.4);
-  border-radius: 10px !important;
+  border-radius: 8px !important;
   background-color: rgba(128, 234, 110, 0.08) !important;
 }
 
-.header__projects-button:hover {
+.project-bar__projects-button:hover {
   background-color: rgba(128, 234, 110, 0.16) !important;
 }
 
-.header__projects-button .MuiBadge-badge {
+.project-bar__projects-button .MuiBadge-badge {
   background-color: #80ea6e;
   color: #0d1a0c;
   font-weight: 700;
