@@ -1,0 +1,2887 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "4101b25e-0be7-46eb-a6cc-dcf90d2484f6",
+      "name": "QA Tienda PG Redis",
+      "database": "POSTGRESQL",
+      "apiType": "REST",
+      "cache": {
+        "enabled": true,
+        "prefix": "tienda",
+        "ttlSeconds": 600,
+        "cacheFindAll": true
+      },
+      "entities": [
+        {
+          "uuid": "08aef682-8597-44da-a9ad-87dc2bd945d6",
+          "entityName": "cliente",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "09c66705-33c3-481b-9d23-6e426926948a",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "0e9e2316-cd43-4cff-bd81-5c595575e969",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c2f8fce0-51e6-4db1-8ab6-6ebbb11b5627",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [
+                "NOT_NULL"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "833b6c11-089b-46a9-97d4-f3041f2654c6",
+              "name": "fechaNacimiento",
+              "type": "DATE",
+              "customType": "",
+              "validations": [
+                "PAST"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "f0cc58a0-f045-467c-a690-ee8a607ee5ac",
+              "name": "limiteCredito",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "65c6bd29-936a-4e18-9bbd-dbf6740418f9",
+              "name": "perfil",
+              "type": "CUSTOM_ONE_TO_ONE",
+              "customType": "perfil",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "08719fdb-fb18-4184-a185-83db7e8e335f",
+          "entityName": "perfil",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "91ec99ec-4103-48d9-aaf7-c489379602ce",
+              "name": "bio",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "83264f04-8225-471b-b4e1-1a5ce81c79f3",
+              "name": "puntos",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "d66b022f-c623-4c79-b641-e64c81f2e84e",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "79889695-f354-456b-8e36-5e783bfe9ce2",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c375ce87-21b3-49c7-a352-3bcb03204086",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "2dd63d09-2115-425c-840a-d681174bf94f",
+          "entityName": "etiqueta",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "1ecbb483-24d8-4d85-9591-5e60b15b6cfd",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "f5440f56-449f-462c-b816-176dfa357363",
+          "entityName": "producto",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "423567cd-f9f5-42bc-a3be-de4bcd4ce888",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "e79c65f2-1559-47e6-9332-2ca01d57a373",
+              "name": "precio",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "bf6d3fc5-6b43-4b13-91e4-22dee73fc235",
+              "name": "stock",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "9981a355-eb9c-43c7-b9ff-1df7cda004db",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "072d5806-aeaf-44e6-8b34-136bdeee64f5",
+              "name": "categoria",
+              "type": "CUSTOM",
+              "customType": "categoria",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "21e79982-12cf-4473-b1bd-ccf7da3f8154",
+              "name": "etiquetas",
+              "type": "CUSTOM_MANY_TO_MANY",
+              "customType": "etiqueta",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "951ad648-98cf-4c52-8693-e8a678545f55",
+          "entityName": "pedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "420af12e-f1a9-443c-ad41-41b3d9ca95bd",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [
+                "PAST_OR_PRESENT"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "d7dfa4b7-9757-4de0-a1c8-e2856ddc8b47",
+              "name": "total",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "5d22e331-c4eb-4089-ae08-b4c1cc8b0884",
+              "name": "estado",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "3924f557-a754-4efc-862d-c7024e9b5bc0",
+              "name": "cliente",
+              "type": "CUSTOM",
+              "customType": "cliente",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "b012929e-fb20-49ec-ac83-664a13f6764e",
+              "name": "items",
+              "type": "CUSTOM_LIST",
+              "customType": "itemPedido",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "a68a5db0-3fdb-4eec-a99f-9285ba46ccc2",
+          "entityName": "itemPedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "6b788f6c-215b-4edb-a66d-4ffc348fd267",
+              "name": "cantidad",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "b97dd512-e28c-491a-85bc-bc60fae5fd03",
+              "name": "precioUnitario",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "9e360436-ef07-4454-83c7-1c1ca55ff1ef",
+              "name": "producto",
+              "type": "CUSTOM",
+              "customType": "producto",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "e0d160cb-cb0a-404a-b70b-40a5c0833baa",
+      "name": "QA Tienda PG sin Redis",
+      "database": "POSTGRESQL",
+      "apiType": "REST",
+      "cache": {
+        "enabled": false,
+        "prefix": "tienda",
+        "ttlSeconds": 600,
+        "cacheFindAll": false
+      },
+      "entities": [
+        {
+          "uuid": "42365d30-f6d7-4073-8fb6-d697c704e8f7",
+          "entityName": "cliente",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "6420ecc2-1f2e-483d-be43-10a6d846a255",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "93a13a42-0e14-4e3f-9859-38b6128c69fa",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "4f2835a5-e1c6-4a2b-bbed-d24fbe280615",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [
+                "NOT_NULL"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "793f6ad8-782b-4da7-8f27-7c0eb47c467f",
+              "name": "fechaNacimiento",
+              "type": "DATE",
+              "customType": "",
+              "validations": [
+                "PAST"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "e3384774-7790-4d5f-8a6b-4f6d6cc4e84c",
+              "name": "limiteCredito",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "fc148eea-1097-4797-a9c4-2c9b9b1e6813",
+              "name": "perfil",
+              "type": "CUSTOM_ONE_TO_ONE",
+              "customType": "perfil",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "497a400d-9d32-482f-b9ff-8323f636e218",
+          "entityName": "perfil",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "f151c7f3-bf17-42cd-9a73-01252b896754",
+              "name": "bio",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c7f2b155-3a19-487a-b6d8-adfed38172ea",
+              "name": "puntos",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "6dc97fa4-1e91-4310-8e89-049f702d8309",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "dcfe807f-d9d0-40f7-ae91-08f2904654ce",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "b0098a09-2bb7-4591-8267-b32f0f319219",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "e5f608cc-cdce-4cb8-8a2c-a0e072d23644",
+          "entityName": "etiqueta",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "60183d96-2118-4b46-88ad-dfffd5aba1ac",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "7f4439ab-1d63-4c12-9eb0-d60c2fba13b4",
+          "entityName": "producto",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "6693421c-da97-46f2-bee0-05a9784643df",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "25dde425-8945-4ab2-9ae3-84910e48d747",
+              "name": "precio",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "835d8ff8-f8b9-4dea-848b-02e258e9054f",
+              "name": "stock",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7da89ab4-32b8-48fa-a529-4d6c30d75336",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "312ae6dc-2f20-4f7c-bbd0-a4e1e6f137da",
+              "name": "categoria",
+              "type": "CUSTOM",
+              "customType": "categoria",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "72222b7a-051e-4441-8c03-93837ff8750a",
+              "name": "etiquetas",
+              "type": "CUSTOM_MANY_TO_MANY",
+              "customType": "etiqueta",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "11e4eae3-5a43-4ac5-a4d4-2e03135c9c43",
+          "entityName": "pedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "36993bd3-3c16-43a1-8668-e1c9135f348b",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [
+                "PAST_OR_PRESENT"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "ae2a5b48-8b63-4d3a-b9f0-6f5d868fb0d0",
+              "name": "total",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c420f1cc-a82b-4b3d-8e88-2f4fead60018",
+              "name": "estado",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "292fb0e3-530d-492d-8dbd-6eb52205b995",
+              "name": "cliente",
+              "type": "CUSTOM",
+              "customType": "cliente",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "750d05a5-cce9-44de-9bff-13f6fef1be51",
+              "name": "items",
+              "type": "CUSTOM_LIST",
+              "customType": "itemPedido",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "7b258716-8a70-4914-b1ab-9594e267fde2",
+          "entityName": "itemPedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "8fdf8a28-13e9-4061-8c76-913117bd1dfe",
+              "name": "cantidad",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "00f84602-1487-4341-8abf-442b69a48cc1",
+              "name": "precioUnitario",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "f38acbf0-f3ff-4f6c-bc1d-68a67f21c75f",
+              "name": "producto",
+              "type": "CUSTOM",
+              "customType": "producto",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "d783261a-a5df-4cca-b80b-c38af5006b2a",
+      "name": "QA Tienda PG GraphQL",
+      "database": "POSTGRESQL",
+      "apiType": "GRAPHQL",
+      "cache": {
+        "enabled": true,
+        "prefix": "tienda",
+        "ttlSeconds": 600,
+        "cacheFindAll": true
+      },
+      "entities": [
+        {
+          "uuid": "016e763f-5f75-4591-92a3-fa99ad41dadd",
+          "entityName": "cliente",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "e0dc7d9c-0414-4765-b78e-8db855b4b08a",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "0f88c98a-966b-4bd4-9046-866b017e7ee4",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "f2e23694-f6fd-4064-98ad-1f39e1a26105",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [
+                "NOT_NULL"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "2c940ca4-027b-4ac7-b680-88d57be2447e",
+              "name": "fechaNacimiento",
+              "type": "DATE",
+              "customType": "",
+              "validations": [
+                "PAST"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7bd2a318-9eec-4301-b1a3-c63598eb298b",
+              "name": "limiteCredito",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "d0daf8da-a572-4da8-a14b-c83257941fc7",
+              "name": "perfil",
+              "type": "CUSTOM_ONE_TO_ONE",
+              "customType": "perfil",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "12226f10-bafc-46c5-a57b-5bedab3b8e53",
+          "entityName": "perfil",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "6eb7ac01-9154-4c5c-84cd-2f7195d0d412",
+              "name": "bio",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "46e8e97d-476a-4b4d-8d6e-024de788b46a",
+              "name": "puntos",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "795ce1ad-5dfa-41f1-9951-7ed1aa8f3c85",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "463856f1-7a39-415d-b2c7-bb6b56dea345",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "75adb24d-6cac-463f-bd59-890a247bbc57",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "f3b9375f-2aaa-4825-a43e-e3acccf65f61",
+          "entityName": "etiqueta",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "49800a8d-4033-4ac8-a875-57330799e2b7",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "bf606b83-fcf6-454d-b977-cc2e01706ba0",
+          "entityName": "producto",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "1abf8a51-d881-4be5-afe5-6a7c52bb2600",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "1ac99251-7dd4-4a89-8d3c-8489e8feeeca",
+              "name": "precio",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "5e31d42f-72f9-4afe-8e04-9d439c6d392b",
+              "name": "stock",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "491d1a46-82c9-48cb-bad4-ba203ac557df",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "3f89f04d-7bab-422a-a800-35c718abfcbc",
+              "name": "categoria",
+              "type": "CUSTOM",
+              "customType": "categoria",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "e91f224b-9c21-491a-bb60-d4e5d99fbe19",
+              "name": "etiquetas",
+              "type": "CUSTOM_MANY_TO_MANY",
+              "customType": "etiqueta",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "81d9abb7-d6eb-4310-a5ef-422a4209dc0b",
+          "entityName": "pedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "89dd4a75-0bc2-4f20-bfa3-d144c5cc57fa",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [
+                "PAST_OR_PRESENT"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "fed213bb-7fb2-4cb3-813d-eb80b3a97c9e",
+              "name": "total",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "1b0f34ca-df91-4c36-9b9c-fc55142105e5",
+              "name": "estado",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "33437cb5-69bf-4ce8-9131-514e9e27a32c",
+              "name": "cliente",
+              "type": "CUSTOM",
+              "customType": "cliente",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "aa1fdd93-0927-4791-996f-ea778e858ca5",
+              "name": "items",
+              "type": "CUSTOM_LIST",
+              "customType": "itemPedido",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "92956b0f-6d9f-4270-bb47-dfab99aad24c",
+          "entityName": "itemPedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "d8d647a8-fcb8-41fb-ab5f-dca383a9dc5e",
+              "name": "cantidad",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "3290367a-03e6-4132-80ac-209d69b4d136",
+              "name": "precioUnitario",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "eec713e3-7431-4ff8-a96d-c743a5ef64b5",
+              "name": "producto",
+              "type": "CUSTOM",
+              "customType": "producto",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "d1467704-31a4-40cf-a67d-fcfeb64dcfde",
+      "name": "QA Tienda MariaDB Redis",
+      "database": "MARIADB",
+      "apiType": "REST",
+      "cache": {
+        "enabled": true,
+        "prefix": "tienda",
+        "ttlSeconds": 600,
+        "cacheFindAll": true
+      },
+      "entities": [
+        {
+          "uuid": "e838d543-9f02-41f5-b3ee-0515d3075810",
+          "entityName": "cliente",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "dba7d3f5-7528-486b-af01-31d1ae224b9c",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7ef812dd-12f4-49ed-9587-3aeb85929da4",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "b8d744dd-3438-4817-8391-93549d9eb549",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [
+                "NOT_NULL"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7c55a279-9af9-48ec-a808-8c9d29ff0560",
+              "name": "fechaNacimiento",
+              "type": "DATE",
+              "customType": "",
+              "validations": [
+                "PAST"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "9a2c0c10-07ff-44f5-9814-3ff363e25c97",
+              "name": "limiteCredito",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "0e763a85-cde8-49dd-b2b7-0ce496e7908f",
+              "name": "perfil",
+              "type": "CUSTOM_ONE_TO_ONE",
+              "customType": "perfil",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "285832cd-3c40-45c7-ad77-9f71c3e3b56c",
+          "entityName": "perfil",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "daa23d9a-4bdd-4614-879a-d6d7f8d3359b",
+              "name": "bio",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c92131c2-315d-4365-860e-589108233a3c",
+              "name": "puntos",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "3ce34b68-1852-4e30-8fa8-b5c65e066db2",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "51d7cece-10f6-43e4-8077-2f9f2400f68d",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "59dcd010-9f28-4990-8a1e-289168ec8625",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "23aa0475-7799-4b1a-acec-6c68fe9185b6",
+          "entityName": "etiqueta",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "0d2de867-bd57-4f1c-8402-818c79a7252c",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "37dcff88-4c91-4a18-9c46-d276125934cb",
+          "entityName": "producto",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "ab33314d-1797-47d2-b577-bd16ae24bfa2",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "cce374c4-d004-4545-901f-d5d0bde94f7f",
+              "name": "precio",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "6be064bb-79a6-4eea-a263-a40f515e27bb",
+              "name": "stock",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "0c5c1134-3429-464c-b8e0-c8c9d5910cf7",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "494f0734-3ba7-46f5-84f6-8438336a1cc9",
+              "name": "categoria",
+              "type": "CUSTOM",
+              "customType": "categoria",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "1a74b4cd-5b50-4937-9aef-4c321cae97d7",
+              "name": "etiquetas",
+              "type": "CUSTOM_MANY_TO_MANY",
+              "customType": "etiqueta",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "121eaf7d-d7ce-4f47-b3a3-a186b8db6573",
+          "entityName": "pedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "1385fd7f-37c5-4e4f-a9e8-cb2b0f4f06c5",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [
+                "PAST_OR_PRESENT"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "6525c7d9-3103-4a11-b414-292bdf8d71e1",
+              "name": "total",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "5263d6f5-eeed-4b01-a63d-ae4e3df26942",
+              "name": "estado",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "77d6a371-2ac9-4477-8ec8-7dc31066802f",
+              "name": "cliente",
+              "type": "CUSTOM",
+              "customType": "cliente",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "db611757-8238-456a-811c-e6f62edcc488",
+              "name": "items",
+              "type": "CUSTOM_LIST",
+              "customType": "itemPedido",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "b6597232-aed0-494e-8c6c-846786acb1ee",
+          "entityName": "itemPedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "f7d3cce4-8913-4bd7-a4a0-d2a1ed1dbc35",
+              "name": "cantidad",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "8f51d38e-4cb8-4c67-80e6-39a8662c16f8",
+              "name": "precioUnitario",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "31fdbf0e-d323-4503-9e0f-1b125b2b31ac",
+              "name": "producto",
+              "type": "CUSTOM",
+              "customType": "producto",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "b4bedbd3-7e07-4bbb-ad10-17563f1dc976",
+      "name": "QA Tienda MySQL Redis",
+      "database": "MYSQL",
+      "apiType": "REST",
+      "cache": {
+        "enabled": true,
+        "prefix": "tienda",
+        "ttlSeconds": 600,
+        "cacheFindAll": true
+      },
+      "entities": [
+        {
+          "uuid": "0fbb0e1b-c45e-4068-a547-a0f31a373bbc",
+          "entityName": "cliente",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "f07e5478-32fb-44ef-947a-8af7fc126469",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "80b3db3c-983c-478b-b9fa-8f9bf3503074",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c38eea8d-a551-4bf5-bedc-babcc0172a92",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [
+                "NOT_NULL"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c0ddada8-d2c4-4ceb-91ab-c26f26207a8b",
+              "name": "fechaNacimiento",
+              "type": "DATE",
+              "customType": "",
+              "validations": [
+                "PAST"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "2bf5ad56-3f89-4ca6-8b50-2784c9fcb8f6",
+              "name": "limiteCredito",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "79fc5a6f-bb05-47a8-b8a5-008a1ead57b8",
+              "name": "perfil",
+              "type": "CUSTOM_ONE_TO_ONE",
+              "customType": "perfil",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "16741bc5-71ea-46f2-b65f-da42ae6bc84d",
+          "entityName": "perfil",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "a1d16343-34f7-4040-b94f-043582816e9a",
+              "name": "bio",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "52d82a07-d6c9-498c-a209-5a4eb3b189da",
+              "name": "puntos",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "dd7af241-6133-43ae-9e89-058fbb42740b",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "ddaced19-c713-4b0c-8dee-e719c8cbc330",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "82e28388-ec8b-4232-8aae-2ef0981afcc0",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "60a4f575-6dd2-4f68-97e1-ef98092f397b",
+          "entityName": "etiqueta",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "bf585ff9-03ee-4f52-8483-48a3bc0ac056",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "de9c4fb5-354f-4949-ba2d-e5aeeef8d513",
+          "entityName": "producto",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "80a7c4ae-45ce-4981-bfe8-caa3f7bb94fd",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "f8d33347-a450-4677-93bc-047f5dda4a22",
+              "name": "precio",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c807de7d-a267-486e-a244-0fcde0232c6f",
+              "name": "stock",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "ecc6afea-1385-436a-a0d8-270c34edbc97",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "f1ac38d6-bc00-4fcd-9980-29ea4cde3158",
+              "name": "categoria",
+              "type": "CUSTOM",
+              "customType": "categoria",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "e01bda12-d02e-4c5b-bc21-83f0ed67d658",
+              "name": "etiquetas",
+              "type": "CUSTOM_MANY_TO_MANY",
+              "customType": "etiqueta",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "9414c8ac-b27a-4357-82b2-9c4cb6b7106b",
+          "entityName": "pedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "5e2011ce-37b1-4705-8a18-fb10faea500c",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [
+                "PAST_OR_PRESENT"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "50577abb-5e21-4ce4-9fce-bf107e0b7a36",
+              "name": "total",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "93faaaf6-0c97-410b-b233-2d444d8fbbe8",
+              "name": "estado",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "51e71fb2-0ddd-42cb-bab4-6fad87ec7864",
+              "name": "cliente",
+              "type": "CUSTOM",
+              "customType": "cliente",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "e48c3357-4f01-48d0-a454-0d2cdb74e88d",
+              "name": "items",
+              "type": "CUSTOM_LIST",
+              "customType": "itemPedido",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "807eeef2-e517-4b2f-b842-dcb4d5e077ba",
+          "entityName": "itemPedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "db91447e-b667-4406-ac2e-eff52612c5a4",
+              "name": "cantidad",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "3066fc73-c7c3-40db-9a2f-354bfeeaeebe",
+              "name": "precioUnitario",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7b521e12-c7ae-459a-8254-492ff83e12aa",
+              "name": "producto",
+              "type": "CUSTOM",
+              "customType": "producto",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "8c0da0c8-d40c-44f0-907d-c9c55cbc2fd2",
+      "name": "QA Tienda SQLite sin Redis",
+      "database": "SQLITE",
+      "apiType": "REST",
+      "cache": {
+        "enabled": false,
+        "prefix": "tienda",
+        "ttlSeconds": 600,
+        "cacheFindAll": false
+      },
+      "entities": [
+        {
+          "uuid": "6a3fab12-21ce-42bf-837e-583967c1e1b8",
+          "entityName": "cliente",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "3ec852f3-a9d6-4735-88fe-33b5a90f07b7",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "b10e0a9d-c160-4e64-9c4f-d35712352df9",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "bbba98f7-650b-493f-9919-e6c2241dfeac",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [
+                "NOT_NULL"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "1beb7ea2-1f21-44fe-bbc4-0b24e6f10ec9",
+              "name": "fechaNacimiento",
+              "type": "DATE",
+              "customType": "",
+              "validations": [
+                "PAST"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "908b3a5b-fb43-43b4-b885-c6f2a9e4d545",
+              "name": "limiteCredito",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "2d0b8638-e7ed-4658-ab4a-99f3697451d6",
+              "name": "perfil",
+              "type": "CUSTOM_ONE_TO_ONE",
+              "customType": "perfil",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "a4ca645c-b00a-439b-8ae6-56e831617487",
+          "entityName": "perfil",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "b1b40e1b-799b-4783-a3f1-46133f73a809",
+              "name": "bio",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "1a0b2f08-d691-4112-8932-25b18c199796",
+              "name": "puntos",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "7a951e50-c019-4317-857d-8ad7c8a0b707",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "f665af25-c687-4cfa-82fd-81427948d550",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "73d6b858-068c-4ffb-9c35-49c34bda04ae",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "fa68c0b6-abb3-4cd6-99cd-df398b2587f1",
+          "entityName": "etiqueta",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "07e05c3a-11a4-4ff7-ac16-891861a2bf70",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "b3780732-3cde-437e-afd2-5d3262c9a4b3",
+          "entityName": "producto",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "d546774e-aaec-4ceb-a4a1-62d9ee8cf145",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "a86a6228-b201-4752-892e-559b5d26a882",
+              "name": "precio",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "0c05af98-cc85-4268-af15-adb06eaf11d9",
+              "name": "stock",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "73998b56-0e6e-4ba0-a3df-74000b9d3a3a",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "02106fce-6125-4a11-b5c3-8f4c17e1d720",
+              "name": "categoria",
+              "type": "CUSTOM",
+              "customType": "categoria",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7f4f58a1-91bb-4b28-bbe4-999223b18230",
+              "name": "etiquetas",
+              "type": "CUSTOM_MANY_TO_MANY",
+              "customType": "etiqueta",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "685a6ad9-e350-4847-8120-a95e74b0f65b",
+          "entityName": "pedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "68429795-00c0-429a-8a9d-e84280b86885",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [
+                "PAST_OR_PRESENT"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "1a81dce0-d31e-431e-b1df-7dc113b51f6c",
+              "name": "total",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "8056b92f-1e92-4256-a546-a2f9566193a7",
+              "name": "estado",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "3858f4ae-de45-49bf-aaaf-d50ef4fed0ea",
+              "name": "cliente",
+              "type": "CUSTOM",
+              "customType": "cliente",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7a35d8fa-d624-457e-8df5-f81eff61bc34",
+              "name": "items",
+              "type": "CUSTOM_LIST",
+              "customType": "itemPedido",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "73433a2d-2d18-4827-a135-809f637270a5",
+          "entityName": "itemPedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "a6bdcd1e-14e8-4394-924d-7fe24ae32738",
+              "name": "cantidad",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "9f4bd643-ef9a-4822-acff-43937a77fcc5",
+              "name": "precioUnitario",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "4b245b68-c516-401f-8886-8f493b25e8a8",
+              "name": "producto",
+              "type": "CUSTOM",
+              "customType": "producto",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "3791ee31-9c67-4f06-888f-520e83b33b45",
+      "name": "QA Tienda H2 Redis",
+      "database": "H2",
+      "apiType": "REST",
+      "cache": {
+        "enabled": true,
+        "prefix": "tienda",
+        "ttlSeconds": 600,
+        "cacheFindAll": true
+      },
+      "entities": [
+        {
+          "uuid": "7f1c3171-3a59-494c-a01c-f236e57f605b",
+          "entityName": "cliente",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "95b2c0a6-cab4-4128-b59c-ceaa1657e154",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "57ed8fff-6aed-49f1-b741-44f05e8f4259",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "1e2e0e95-f4c8-44e6-a1f0-693b8665f964",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [
+                "NOT_NULL"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "41868505-cd99-4690-9e74-87b053de02e8",
+              "name": "fechaNacimiento",
+              "type": "DATE",
+              "customType": "",
+              "validations": [
+                "PAST"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "f3c3f14a-3a91-48a9-941a-7f91eb1fbe73",
+              "name": "limiteCredito",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "261f58b1-a86c-4130-9429-7cff56545f2f",
+              "name": "perfil",
+              "type": "CUSTOM_ONE_TO_ONE",
+              "customType": "perfil",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "1230777a-4c02-47df-aa4a-6dad33515dbf",
+          "entityName": "perfil",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "b2766196-9187-499e-b30e-ee9a7c47fbdc",
+              "name": "bio",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "dcf00e23-0611-4c83-9d47-ad1438cd0862",
+              "name": "puntos",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "73ca0ea4-3813-432b-8604-cc91cd802e0a",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "9443b795-26a7-482d-8df9-faf9bde08f59",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "642a3c7b-a4c2-46c9-a937-755d25569816",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "98f89070-156d-414e-b6fa-3daf10ae5758",
+          "entityName": "etiqueta",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "9e1b381d-bcf6-4806-b036-52c7e1cca088",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "8b10f434-5642-4a1c-9be1-7dfbe844b10c",
+          "entityName": "producto",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "ebbd966b-5144-4c3d-80c3-6fbfd154ab6c",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7b0c9bd7-6c1e-4410-8e76-b35395caad65",
+              "name": "precio",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "19208a91-0a3d-44c7-8b69-ce470db9a2eb",
+              "name": "stock",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "fb9d3b33-8b0a-42e7-9807-5d06364a3876",
+              "name": "activo",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "25e015ab-cb46-46d6-aba0-fdef32bf121a",
+              "name": "categoria",
+              "type": "CUSTOM",
+              "customType": "categoria",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "255d83b0-2a00-4880-9cc4-38e283b3ca4b",
+              "name": "etiquetas",
+              "type": "CUSTOM_MANY_TO_MANY",
+              "customType": "etiqueta",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "35cd114a-1beb-408b-8ad8-54f86b0e1591",
+          "entityName": "pedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "827ac587-d3b2-41bd-b8e3-056e80a6b15d",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [
+                "PAST_OR_PRESENT"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "25561e29-1a1c-4808-9137-183ea7a7825a",
+              "name": "total",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "f439d48e-8c3e-43e2-abb3-03f2cf0846c8",
+              "name": "estado",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "7c847551-2f64-4982-9be0-483d699512b6",
+              "name": "cliente",
+              "type": "CUSTOM",
+              "customType": "cliente",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "c566a3c9-303f-488b-b3cb-6d164ae204f9",
+              "name": "items",
+              "type": "CUSTOM_LIST",
+              "customType": "itemPedido",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "0b90c819-e220-42f5-ba9a-5607c47bc7f3",
+          "entityName": "itemPedido",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "815eb692-db01-4fb8-9cbe-620f15c4f950",
+              "name": "cantidad",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "b208c1f2-ce44-4900-884e-ebb08172ed80",
+              "name": "precioUnitario",
+              "type": "DECIMAL",
+              "customType": "",
+              "validations": [
+                "POSITIVE"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "0d88a13b-d3f2-4f97-b939-94ffb080b4de",
+              "name": "producto",
+              "type": "CUSTOM",
+              "customType": "producto",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "e386efef-992c-4c7c-aa67-2dea3c5e45dd",
+      "name": "QA Blog Mongo Redis",
+      "database": "MONGODB",
+      "apiType": "REST",
+      "cache": {
+        "enabled": true,
+        "prefix": "blog",
+        "ttlSeconds": 600,
+        "cacheFindAll": true
+      },
+      "entities": [
+        {
+          "uuid": "df1ed60a-16fb-4fdd-9147-51d81620d189",
+          "entityName": "post",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "488fe82a-5e86-459e-85ca-f1353c08b13d",
+              "name": "titulo",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "2cf040cf-f016-45dc-af5f-b4f922ec8879",
+              "name": "contenido",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "49692706-d24c-4f8f-b1fa-2b3dc4460c32",
+              "name": "publicado",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "32e43000-2420-4f3f-b916-f7e1982ccd03",
+              "name": "fechaPublicacion",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "96ce603c-49ee-45bd-9b08-ed0285bc68e0",
+              "name": "vistas",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "a9bdb9e1-a4de-4c9f-a034-5e11a8ed296c",
+              "name": "autor",
+              "type": "COMPOSITION",
+              "customType": "autor",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "a3102b33-66a5-400d-953d-8004754a6056",
+              "name": "comentarios",
+              "type": "COMPOSITION_LIST",
+              "customType": "comentario",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "2e02d857-ba99-4b1d-b66e-38aad6d2d4ba",
+          "entityName": "autor",
+          "embedded": true,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "28e070e4-e201-4a9d-a853-a9b04979e0cb",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "fd177ea0-e1b9-4c1c-9ea4-5e5d040b395e",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "d47e95b7-71e1-4322-bf75-8210b76ddf88",
+          "entityName": "comentario",
+          "embedded": true,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "1ec74a87-79c1-4e03-976f-3428551f4572",
+              "name": "texto",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "dc610062-eb05-4a00-81c7-c617b70e64ad",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "5d1286b7-4e99-41d9-8cd2-146063aa1ab6",
+              "name": "aprobado",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "58b7b46a-0ab7-4e4a-9c30-18acf60967f2",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "67cbb7e5-c055-4a2e-9ef1-3260e99b5c50",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "80fd8bd1-2574-47e8-a250-8f112c520ce7",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "5324dac4-32c8-4914-825c-bf5687835841",
+              "name": "activa",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "a85f7848-8548-40bf-ab15-01966734252e",
+      "name": "QA Blog Mongo sin Redis",
+      "database": "MONGODB",
+      "apiType": "REST",
+      "cache": {
+        "enabled": false,
+        "prefix": "blog",
+        "ttlSeconds": 600,
+        "cacheFindAll": false
+      },
+      "entities": [
+        {
+          "uuid": "52230438-db9a-4be0-b873-d32c09241a2f",
+          "entityName": "post",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "e38013d3-89f2-4dde-8897-a47a86abcac1",
+              "name": "titulo",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "cdebf085-ec41-45fc-be61-a97fb23a1a97",
+              "name": "contenido",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "fc65789d-a18c-4410-aac0-d3c671415ce1",
+              "name": "publicado",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "cfa3afb5-15bc-4b42-abde-c2695d9c70d4",
+              "name": "fechaPublicacion",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "aacbed43-ebc6-4289-bd9a-055ca5f5c53c",
+              "name": "vistas",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "a1d171c5-bf43-44c7-8126-8aa9a7572f35",
+              "name": "autor",
+              "type": "COMPOSITION",
+              "customType": "autor",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "5c9f0904-e382-4efa-9b70-1b110b19541a",
+              "name": "comentarios",
+              "type": "COMPOSITION_LIST",
+              "customType": "comentario",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "35303d60-ef62-4eee-a795-66ad58025ce4",
+          "entityName": "autor",
+          "embedded": true,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "d96aaa8b-9167-4ef3-9398-6db05f4b5d5a",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "243b2b2a-cd3d-4fbe-9104-62f31ca7cb3a",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "77fef916-f589-4759-b79b-faf7ea5578ab",
+          "entityName": "comentario",
+          "embedded": true,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "2536644f-7c3d-41e3-806a-fdb04a3cb657",
+              "name": "texto",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "bc3c4b4c-cf4c-4fdf-b972-54ba4507a9a0",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "f2502ac3-3513-4173-a903-0051a412c69d",
+              "name": "aprobado",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "629bcb22-aabb-4869-9937-8207044d0ce9",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "1c644b16-df97-4612-a118-ba8d1fcd3d4d",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "13e37c46-2533-4786-97df-e092b9b21247",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "025c59dd-6795-49ce-9b96-dc8a6296c72c",
+              "name": "activa",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    },
+    {
+      "id": "c20afd22-4391-468c-8ead-83321d67327c",
+      "name": "QA Blog Mongo GraphQL",
+      "database": "MONGODB",
+      "apiType": "GRAPHQL",
+      "cache": {
+        "enabled": true,
+        "prefix": "blog",
+        "ttlSeconds": 600,
+        "cacheFindAll": true
+      },
+      "entities": [
+        {
+          "uuid": "26d6bbb7-d380-465b-98a8-2ae91bd31979",
+          "entityName": "post",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "0fbd4f51-534d-4051-ad3e-f891d29a4026",
+              "name": "titulo",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "41daeefd-178c-40df-815b-7409c906bdae",
+              "name": "contenido",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "da4b5b0a-0771-4839-b85b-65cb3e270385",
+              "name": "publicado",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "962b9ac9-f165-4aea-a02f-12b668e5ee9e",
+              "name": "fechaPublicacion",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "2cd50694-9703-46db-9692-76656c60c77a",
+              "name": "vistas",
+              "type": "INTEGER",
+              "customType": "",
+              "validations": [
+                "POSITIVE_OR_ZERO"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "cd08b2c0-a452-44b6-9ad2-27a27f1303f7",
+              "name": "autor",
+              "type": "COMPOSITION",
+              "customType": "autor",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "471fdded-b83f-4ad0-a100-055e6c3146ef",
+              "name": "comentarios",
+              "type": "COMPOSITION_LIST",
+              "customType": "comentario",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "9d7ec90d-8193-4681-9ca5-aaa7acbba033",
+          "entityName": "autor",
+          "embedded": true,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "5a1241ef-6ed0-4795-809f-00b2c8dfca28",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "36c43065-8526-4556-8bc8-a32e7943d4ba",
+              "name": "email",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "a61f54e2-7ba9-430c-9013-ebcf4f395b74",
+          "entityName": "comentario",
+          "embedded": true,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "b668bc2d-60b8-42d0-85ae-9f1663e2ca14",
+              "name": "texto",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "6073aa2b-2f30-43e4-ba20-0e3da6de73f6",
+              "name": "fecha",
+              "type": "DATETIME",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "29c922f5-4ca0-4932-a548-217a0f08d6c1",
+              "name": "aprobado",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        },
+        {
+          "uuid": "dd153be5-b5d4-45aa-b18b-bd776ab3f164",
+          "entityName": "categoria",
+          "embedded": false,
+          "cacheEnabled": true,
+          "attributes": [
+            {
+              "uuid": "cd7c4955-9ca9-4c0b-b372-cb99ffa9faa5",
+              "name": "nombre",
+              "type": "STRING",
+              "customType": "",
+              "validations": [
+                "NOT_BLANK"
+              ],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "94a8e023-efde-40e2-a095-e3fcabe14873",
+              "name": "descripcion",
+              "type": "STRING",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            },
+            {
+              "uuid": "720f8ecd-5bcb-48fa-8935-a34707296bce",
+              "name": "activa",
+              "type": "BOOLEAN",
+              "customType": "",
+              "validations": [],
+              "minValue": "",
+              "maxValue": ""
+            }
+          ]
+        }
+      ],
+      "createdAt": 1793713004090,
+      "updatedAt": 1793713004090
+    }
+  ]
+}
