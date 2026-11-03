@@ -117,7 +117,15 @@ jobs:
               fi
             done
             if [ "$ok" = "1" ]; then
-              echo "Smoke test OK: frontend y backend responden"
+              preflight=$(curl -s -o /dev/null -w '%{http_code}' -X OPTIONS "$URL/api/domain" \
+                -H "Origin: $URL" \
+                -H 'Access-Control-Request-Method: POST' \
+                -H 'Access-Control-Request-Headers: content-type' || true)
+              if [ "$preflight" != "200" ]; then
+                echo "::error::Preflight CORS falló con HTTP $preflight"
+                exit 1
+              fi
+              echo "Smoke test OK: frontend, backend y preflight CORS responden"
               exit 0
             fi
             sleep 5
