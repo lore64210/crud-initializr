@@ -18,6 +18,7 @@ import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import DownloadIcon from "@mui/icons-material/Download";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import UploadFileIcon from "@mui/icons-material/UploadFile";
+import { useLanguage } from "../i18n/LanguageContext";
 import "../css/app.css";
 
 const DATABASE_LABELS = {
@@ -27,19 +28,6 @@ const DATABASE_LABELS = {
   SQLITE: "SQLite",
   H2: "H2",
   MONGODB: "MongoDB",
-};
-
-const formatUpdatedAt = (value) => {
-  try {
-    return new Intl.DateTimeFormat("es-AR", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(value));
-  } catch {
-    return "";
-  }
 };
 
 const ProjectsDrawer = ({
@@ -53,8 +41,24 @@ const ProjectsDrawer = ({
   onImport,
   onExport,
 }) => {
+  const { t, language } = useLanguage();
   const [pendingDelete, setPendingDelete] = useState(null);
   const fileInputRef = useRef(null);
+
+  const locale = language === "en" ? "en-US" : "es-AR";
+
+  const formatUpdatedAt = (value) => {
+    try {
+      return new Intl.DateTimeFormat(locale, {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }).format(new Date(value));
+    } catch {
+      return "";
+    }
+  };
 
   const confirmDelete = () => {
     if (pendingDelete) {
@@ -90,17 +94,19 @@ const ProjectsDrawer = ({
         <div className="projects-drawer">
           <div className="projects-drawer__header">
             <div className="projects-drawer__titles">
-              <span className="projects-drawer__eyebrow">TUS PROYECTOS</span>
+              <span className="projects-drawer__eyebrow">
+                {t("projects.eyebrow")}
+              </span>
               <Typography className="projects-drawer__title">
-                Proyectos guardados
+                {t("projects.title")}
               </Typography>
               <span className="projects-drawer__subtitle">
-                Se guardan en este navegador.
+                {t("projects.storageNote")}
               </span>
             </div>
             <IconButton
               className="projects-drawer__close"
-              aria-label="Cerrar proyectos guardados"
+              aria-label={t("projects.closeAria")}
               onClick={onClose}
             >
               <CloseIcon />
@@ -111,11 +117,8 @@ const ProjectsDrawer = ({
             {projects.length === 0 ? (
               <div className="projects-drawer__empty">
                 <FolderOpenIcon />
-                <p>Todavía no hay proyectos guardados</p>
-                <span>
-                  Usá el botón Guardar del encabezado para guardar el trabajo
-                  actual.
-                </span>
+                <p>{t("projects.emptyTitle")}</p>
+                <span>{t("projects.emptyHint")}</span>
               </div>
             ) : (
               projects.map((project) => {
@@ -145,14 +148,16 @@ const ProjectsDrawer = ({
                       <span className="project-item__name">{project.name}</span>
                       {isCurrent && (
                         <span className="project-item__current">
-                          En edición
+                          {t("projects.current")}
                         </span>
                       )}
-                      <Tooltip title="Eliminar proyecto" arrow>
+                      <Tooltip title={t("projects.deleteTooltip")} arrow>
                         <IconButton
                           size="small"
                           className="project-item__delete"
-                          aria-label={`Eliminar proyecto ${project.name}`}
+                          aria-label={t("projects.deleteAria", {
+                            name: project.name,
+                          })}
                           onClick={(event) => {
                             event.stopPropagation();
                             setPendingDelete(project);
@@ -164,8 +169,10 @@ const ProjectsDrawer = ({
                     </div>
 
                     <span className="project-item__meta">
-                      {formatUpdatedAt(project.updatedAt)} · {entityCount}{" "}
-                      {entityCount === 1 ? "entidad" : "entidades"}
+                      {t("projects.meta", {
+                        date: formatUpdatedAt(project.updatedAt),
+                        entities: entityCount,
+                      })}
                     </span>
 
                     <div className="project-item__tags">
@@ -198,7 +205,9 @@ const ProjectsDrawer = ({
                             key={entity.uuid}
                             size="small"
                             variant="outlined"
-                            label={entity.entityName || "Sin nombre"}
+                            label={
+                              entity.entityName || t("projects.unnamedEntity")
+                            }
                             className="project-item__entity"
                           />
                         ))}
@@ -226,7 +235,7 @@ const ProjectsDrawer = ({
               className="projects-drawer__new"
               onClick={onNewProject}
             >
-              Nuevo proyecto
+              {t("projects.new")}
             </Button>
             <div className="projects-drawer__actions">
               <Button
@@ -234,7 +243,7 @@ const ProjectsDrawer = ({
                 startIcon={<UploadFileIcon />}
                 onClick={() => fileInputRef.current?.click()}
               >
-                Importar
+                {t("projects.import")}
               </Button>
               <Button
                 className="projects-drawer__action"
@@ -242,20 +251,19 @@ const ProjectsDrawer = ({
                 onClick={onExport}
                 disabled={projects.length === 0}
               >
-                Exportar
+                {t("projects.export")}
               </Button>
             </div>
             <input
               ref={fileInputRef}
               type="file"
               accept=".json,application/json"
-              aria-label="Importar proyectos desde un archivo JSON"
+              aria-label={t("projects.importAria")}
               className="projects-drawer__file-input"
               onChange={handleFileChange}
             />
             <span className="projects-drawer__footer-note">
-              Los proyectos quedan guardados solo en este navegador. Usá
-              Importar/Exportar para moverlos entre navegadores.
+              {t("projects.footerNote")}
             </span>
           </div>
         </div>
@@ -271,14 +279,16 @@ const ProjectsDrawer = ({
         }}
       >
         <DialogTitle className="project-dialog__title">
-          <span className="project-dialog__eyebrow">ELIMINAR PROYECTO</span>
+          <span className="project-dialog__eyebrow">
+            {t("projects.deleteEyebrow")}
+          </span>
           <Typography className="project-dialog__heading">
-            ¿Eliminar «{pendingDelete?.name}»?
+            {t("projects.deleteHeading", { name: pendingDelete?.name })}
           </Typography>
         </DialogTitle>
         <DialogContent className="project-dialog__content" dividers>
           <p className="project-dialog__intro">
-            Se borrará de este navegador. Esta acción no se puede deshacer.
+            {t("projects.deleteIntro")}
           </p>
         </DialogContent>
         <DialogActions className="project-dialog__actions">
@@ -286,14 +296,14 @@ const ProjectsDrawer = ({
             className="project-dialog__cancel"
             onClick={() => setPendingDelete(null)}
           >
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             className="project-dialog__confirm project-dialog__confirm--danger"
             variant="contained"
             onClick={confirmDelete}
           >
-            Eliminar
+            {t("common.delete")}
           </Button>
         </DialogActions>
       </Dialog>

@@ -6,6 +6,7 @@ import CacheSettings from "../components/CacheSettings";
 import ProjectsDrawer from "../components/ProjectsDrawer";
 import SaveProjectDialog from "../components/SaveProjectDialog";
 import OpenProjectDialog from "../components/OpenProjectDialog";
+import LanguageSwitcher from "../components/LanguageSwitcher";
 import { RelationshipGraphPanel } from "../components/RelationshipGraph";
 import service, { formatStringToCamelCase } from "../service/service";
 import {
@@ -38,6 +39,8 @@ import FolderOpenIcon from "@mui/icons-material/FolderOpen";
 import HelpOutlineIcon from "@mui/icons-material/HelpOutline";
 import SaveIcon from "@mui/icons-material/Save";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { useLanguage } from "../i18n/LanguageContext";
+import RichText from "../i18n/RichText";
 
 import "../css/app.css";
 
@@ -62,10 +65,6 @@ const MONGO_COMPOSITION_TYPES = ["COMPOSITION", "COMPOSITION_LIST"];
 const isRelationType = (type) => SQL_RELATION_TYPES.includes(type);
 const isCompositionType = (type) => MONGO_COMPOSITION_TYPES.includes(type);
 const isLinkType = (type) => isRelationType(type) || isCompositionType(type);
-const isListType = (type) =>
-  type === "CUSTOM_LIST" ||
-  type === "CUSTOM_MANY_TO_MANY" ||
-  type === "COMPOSITION_LIST";
 const isNumericType = (type) =>
   ["INTEGER", "LONG", "DECIMAL", "DOUBLE"].includes(type);
 
@@ -84,36 +83,36 @@ const createEmptyEntity = () => ({
   cacheEnabled: true,
 });
 
-const validateForm = (businessName, entities, database, cache) => {
+const validateForm = (businessName, entities, database, cache, t) => {
   const title = businessName.trim();
   if (!title) {
-    return "El nombre del proyecto no puede estar vacío";
+    return t("validation.projectNameEmpty");
   }
   if (title.length > 30) {
-    return "El nombre del proyecto no puede tener más de 30 caracteres";
+    return t("validation.projectNameTooLong");
   }
   if (!formatStringToCamelCase(title)) {
-    return "El nombre del proyecto debe contener al menos una letra o número";
+    return t("validation.projectNameInvalid");
   }
 
   if (cache?.enabled) {
     const prefix = String(cache.prefix || "").trim();
     if (!prefix) {
-      return "El prefijo de claves de Redis no puede estar vacío";
+      return t("validation.redisPrefixEmpty");
     }
     if (prefix.length > 50) {
-      return "El prefijo de claves de Redis no puede tener más de 50 caracteres";
+      return t("validation.redisPrefixTooLong");
     }
     if (!/^[A-Za-z0-9:_-]+$/.test(prefix)) {
-      return "El prefijo de claves de Redis solo puede contener letras, números, ':', '_' y '-'";
+      return t("validation.redisPrefixChars");
     }
     if (!Number.isInteger(Number(cache.ttlSeconds)) || Number(cache.ttlSeconds) <= 0) {
-      return "El TTL de Redis debe ser un número entero mayor que cero";
+      return t("validation.redisTtl");
     }
   }
 
   if (entities.length === 0) {
-    return "El proyecto debe tener al menos una entidad";
+    return t("validation.noEntities");
   }
 
   const entityNames = new Set();
@@ -122,16 +121,20 @@ const validateForm = (businessName, entities, database, cache) => {
     const entityName = formatStringToCamelCase(entity.entityName);
 
     if (!entity.entityName.trim()) {
-      return `La entidad #${index + 1} no tiene nombre`;
+      return t("validation.entityNoName", { index: index + 1 });
     }
     if (!/^[A-Za-z][A-Za-z0-9]*$/.test(entityName)) {
-      return `El nombre de la entidad "${entity.entityName}" no es válido`;
+      return t("validation.entityNameInvalid", {
+        name: entity.entityName,
+      });
     }
     if (entityName.length > 30) {
-      return `El nombre de la entidad "${entity.entityName}" no puede tener más de 30 caracteres`;
+      return t("validation.entityNameTooLong", {
+        name: entity.entityName,
+      });
     }
     if (entityNames.has(entityName.toLowerCase())) {
-      return `La entidad "${entity.entityName}" está repetida`;
+      return t("validation.entityDuplicate", { name: entity.entityName });
     }
     entityNames.add(entityName.toLowerCase());
 
@@ -140,38 +143,55 @@ const validateForm = (businessName, entities, database, cache) => {
       const attributeName = formatStringToCamelCase(attribute.name);
 
       if (!attribute.name.trim()) {
-        return `La entidad "${entity.entityName}" tiene un atributo sin nombre`;
+        return t("validation.attributeNoName", {
+          entity: entity.entityName,
+        });
       }
       if (!/^[A-Za-z][A-Za-z0-9]*$/.test(attributeName)) {
-        return `El nombre del atributo "${attribute.name}" no es válido`;
+        return t("validation.attributeNameInvalid", {
+          name: attribute.name,
+        });
       }
       if (attributeName.length > 30) {
-        return `El nombre del atributo "${attribute.name}" no puede tener más de 30 caracteres`;
+        return t("validation.attributeNameTooLong", {
+          name: attribute.name,
+        });
       }
       if (attributeNames.has(attributeName.toLowerCase())) {
-        return `El atributo "${attribute.name}" está repetido en "${entity.entityName}"`;
+        return t("validation.attributeDuplicate", {
+          attribute: attribute.name,
+          entity: entity.entityName,
+        });
       }
       attributeNames.add(attributeName.toLowerCase());
 
       if (isLinkType(attribute.type) && !attribute.customType?.trim()) {
-        return `El atributo "${attribute.name}" necesita una entidad destino seleccionada`;
+        return t("validation.attributeNeedsTarget", {
+          name: attribute.name,
+        });
       }
 
       if (isNumericType(attribute.type)) {
         const hasMin = attribute.validations.includes("MIN");
         const hasMax = attribute.validations.includes("MAX");
         if (hasMin && attribute.minValue === "") {
-          return `El atributo "${attribute.name}" necesita un valor mínimo`;
+          return t("validation.attributeNeedsMin", {
+            name: attribute.name,
+          });
         }
         if (hasMax && attribute.maxValue === "") {
-          return `El atributo "${attribute.name}" necesita un valor máximo`;
+          return t("validation.attributeNeedsMax", {
+            name: attribute.name,
+          });
         }
         if (
           hasMin &&
           hasMax &&
           Number(attribute.minValue) > Number(attribute.maxValue)
         ) {
-          return `El valor mínimo de "${attribute.name}" no puede ser mayor que el máximo`;
+          return t("validation.attributeMinGreaterThanMax", {
+            name: attribute.name,
+          });
         }
       }
 
@@ -184,20 +204,32 @@ const validateForm = (businessName, entities, database, cache) => {
         );
 
         if (!target) {
-          return `El atributo "${attribute.name}" de "${entity.entityName}" referencia a una entidad inexistente: "${attribute.customType}"`;
+          return t("validation.attributeMissingTarget", {
+            attribute: attribute.name,
+            entity: entity.entityName,
+            target: attribute.customType,
+          });
         }
         if (target.uuid === entity.uuid) {
-          return `El atributo "${attribute.name}" de "${entity.entityName}" no puede referenciarse a sí mismo`;
+          return t("validation.attributeSelfReference", {
+            attribute: attribute.name,
+            entity: entity.entityName,
+          });
         }
       }
 
       if (database === "MONGODB") {
         if (isRelationType(attribute.type)) {
-          return `MongoDB no soporta relaciones SQL en esta versión. El atributo "${attribute.name}" de "${entity.entityName}" es una relación. Cambialo a una composición o elegí una base SQL.`;
+          return t("validation.mongoNoRelations", {
+            attribute: attribute.name,
+            entity: entity.entityName,
+          });
         }
         if (isCompositionType(attribute.type)) {
           if (entity.embedded) {
-            return `La entidad embebida "${entity.entityName}" no puede contener composiciones en esta versión.`;
+            return t("validation.embeddedNoComposition", {
+              entity: entity.entityName,
+            });
           }
           const target = entities.find(
             (candidate) =>
@@ -205,15 +237,23 @@ const validateForm = (businessName, entities, database, cache) => {
               formatStringToCamelCase(attribute.customType).toLowerCase(),
           );
           if (!target?.embedded) {
-            return `La composición "${attribute.name}" de "${entity.entityName}" debe apuntar a un documento embebido.`;
+            return t("validation.compositionNeedsEmbedded", {
+              attribute: attribute.name,
+              entity: entity.entityName,
+            });
           }
         }
       } else {
         if (entity.embedded) {
-          return `La entidad "${entity.entityName}" está marcada como documento embebido y solo es válida para MongoDB.`;
+          return t("validation.embeddedOnlyMongo", {
+            entity: entity.entityName,
+          });
         }
         if (isCompositionType(attribute.type)) {
-          return `La composición "${attribute.name}" de "${entity.entityName}" solo es válida para MongoDB.`;
+          return t("validation.compositionOnlyMongo", {
+            attribute: attribute.name,
+            entity: entity.entityName,
+          });
         }
       }
     }
@@ -224,7 +264,7 @@ const validateForm = (businessName, entities, database, cache) => {
       (entity) => !entity.embedded && entity.cacheEnabled !== false,
     ).length;
     if (cacheableCount === 0) {
-      return "Seleccioná al menos una entidad para cachear o deshabilitá el cache Redis";
+      return t("validation.cacheNoEntities");
     }
   }
 
@@ -232,6 +272,7 @@ const validateForm = (businessName, entities, database, cache) => {
 };
 
 function HomePage() {
+  const { t, language } = useLanguage();
   const [projectDownloaded, setProjectDownloaded] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [businessName, setBusinessName] = useState("");
@@ -293,19 +334,14 @@ function HomePage() {
   const graphQlMode = apiType === "GRAPHQL";
   const mongoRelationWarning =
     documentMode && relationAttributeCount > 0
-      ? `Hay ${relationAttributeCount} ${
-          relationAttributeCount === 1 ? "relación" : "relaciones"
-        } SQL en el mapa. MongoDB no las soporta: cambialas a composiciones o volvé a una base SQL.`
+      ? t("home.mongoRelationsWarning", { count: relationAttributeCount })
       : "";
   const sqlCompositionWarning =
     !documentMode && (compositionAttributeCount > 0 || embeddedEntityCount > 0)
-      ? `Hay ${compositionAttributeCount} ${
-          compositionAttributeCount === 1 ? "composición" : "composiciones"
-        } y ${embeddedEntityCount} ${
-          embeddedEntityCount === 1
-            ? "entidad embebida"
-            : "entidades embebidas"
-        } de MongoDB. Las bases SQL no las soportan: cambialas o volvé a MongoDB.`
+      ? t("home.sqlCompositionsWarning", {
+          compositions: compositionAttributeCount,
+          embedded: embeddedEntityCount,
+        })
       : "";
 
   const changeDatabase = (nextDatabase) => {
@@ -527,10 +563,10 @@ function HomePage() {
       setSavedProjects(projects);
       setCurrentProjectId(project.id);
       setBusinessName(project.name);
-      setSaveFeedback(`Proyecto «${project.name}» guardado`);
+      setSaveFeedback(t("home.feedback.saved", { name: project.name }));
       return true;
     } catch {
-      setErrorMessage("No se pudo guardar el proyecto en este navegador");
+      setErrorMessage(t("home.feedback.saveError"));
       return false;
     }
   };
@@ -651,9 +687,9 @@ function HomePage() {
       if (currentProjectId === projectId) {
         setCurrentProjectId(null);
       }
-      setSaveFeedback("Proyecto eliminado");
+      setSaveFeedback(t("home.feedback.deleted"));
     } catch {
-      setErrorMessage("No se pudo eliminar el proyecto");
+      setErrorMessage(t("home.feedback.deleteError"));
     }
   };
 
@@ -664,30 +700,34 @@ function HomePage() {
 
     try {
       exportProjectsToFile();
-      setSaveFeedback("Proyectos exportados");
+      setSaveFeedback(t("home.feedback.exported"));
     } catch {
-      setErrorMessage("No se pudieron exportar los proyectos");
+      setErrorMessage(t("home.feedback.exportError"));
     }
   };
 
   const handleImportProjects = (text) => {
     try {
-      const { projects, imported } = importProjectsFromText(text);
+      const { projects, imported } = importProjectsFromText(text, language);
       setSavedProjects(projects);
       setSaveFeedback(
         imported === 1
-          ? "Se importó 1 proyecto"
-          : `Se importaron ${imported} proyectos`,
+          ? t("home.feedback.importedOne")
+          : t("home.feedback.importedMany", { count: imported }),
       );
     } catch (error) {
-      setErrorMessage(
-        error?.message || "No se pudieron importar los proyectos",
-      );
+      setErrorMessage(error?.message || t("home.feedback.importError"));
     }
   };
 
   const submit = async () => {
-    const validationError = validateForm(businessName, entities, database, cache);
+    const validationError = validateForm(
+      businessName,
+      entities,
+      database,
+      cache,
+      t,
+    );
     if (validationError) {
       setErrorMessage(validationError);
       return;
@@ -695,13 +735,16 @@ function HomePage() {
 
     setErrorMessage("");
     setLoading(true);
-    const result = await service.createProject({
-      businessName,
-      entities,
-      database,
-      apiType,
-      cache,
-    });
+    const result = await service.createProject(
+      {
+        businessName,
+        entities,
+        database,
+        apiType,
+        cache,
+      },
+      language,
+    );
     setLoading(false);
 
     if (!result.ok) {
@@ -727,20 +770,21 @@ function HomePage() {
               <Typography variant="h4" className="title">
                 Spring CRUD Initializr
               </Typography>
-              <span className="brand__subtitle">
-                Proyecto personal de Lorenzo Lopez
-              </span>
+              <span className="brand__subtitle">{t("home.subtitle")}</span>
             </div>
           </div>
-          <span className="header__badge">Spring Boot v4.1.2</span>
+          <div className="header__meta">
+            <span className="header__badge">Spring Boot v4.1.2</span>
+            <LanguageSwitcher />
+          </div>
         </div>
       </div>
       <div className="bussines-name-input-container">
         <div className="project-bar">
-          <Tooltip title="Proyectos guardados" arrow>
+          <Tooltip title={t("home.savedProjectsTooltip")} arrow>
             <IconButton
               className="project-bar__projects-button"
-              aria-label="Abrir proyectos guardados"
+              aria-label={t("home.openSavedProjects")}
               onClick={() => setDrawerOpen(true)}
             >
               <Badge
@@ -757,16 +801,13 @@ function HomePage() {
             color="success"
             className="input project-name-input"
             id="project-name"
-            label="Nombre del proyecto"
+            label={t("home.projectName")}
             variant="outlined"
             size="small"
             value={businessName}
             onChange={({ target: { value } }) => setBusinessName(value)}
           />
-          <Tooltip
-            title="Descarga un ZIP con un proyecto Spring Boot listo para ejecutar, incluyendo tus entidades, relaciones y composiciones."
-            arrow
-          >
+          <Tooltip title={t("home.createTooltip")} arrow>
             <span className="create-project-tooltip-wrapper">
               <Button
                 className="create-project-button"
@@ -776,11 +817,11 @@ function HomePage() {
                 startIcon={<DownloadIcon />}
                 disabled={loading}
               >
-                {loading ? "Creando proyecto..." : "Crear proyecto"}
+                {loading ? t("home.creating") : t("home.create")}
               </Button>
             </span>
           </Tooltip>
-          <Tooltip title="Guardar el proyecto en este navegador" arrow>
+          <Tooltip title={t("home.saveTooltip")} arrow>
             <Button
               className="save-project-button"
               variant="outlined"
@@ -788,7 +829,7 @@ function HomePage() {
               startIcon={<SaveIcon />}
               onClick={handleSaveClick}
             >
-              Guardar
+              {t("home.save")}
             </Button>
           </Tooltip>
         </div>
@@ -799,12 +840,12 @@ function HomePage() {
         warning={
           mongoRelationWarning
             ? {
-                title: "Relaciones SQL detectadas",
+                title: t("home.mongoRelationsTitle"),
                 message: mongoRelationWarning,
               }
             : sqlCompositionWarning
               ? {
-                  title: "Composiciones de MongoDB detectadas",
+                  title: t("home.sqlCompositionsTitle"),
                   message: sqlCompositionWarning,
                 }
               : null
@@ -831,20 +872,22 @@ function HomePage() {
             onDeleteRelation={deleteAttribute}
           />
         </div>
-        <aside className="entity-editor" aria-label="Editor de entidad">
+        <aside className="entity-editor" aria-label={t("home.editorEyebrow")}>
           <div className="entity-editor__header">
             <div className="entity-editor__titles">
-              <span className="entity-editor__eyebrow">EDITOR DE ENTIDAD</span>
+              <span className="entity-editor__eyebrow">
+                {t("home.editorEyebrow")}
+              </span>
               <Typography className="entity-editor__title">
                 {selectedEntity
-                  ? selectedEntity.entityName.trim() || "Entidad sin nombre"
-                  : "Ninguna entidad seleccionada"}
+                  ? selectedEntity.entityName.trim() || t("home.unnamedEntity")
+                  : t("home.noEntitySelected")}
               </Typography>
             </div>
             {selectedEntity && (
-              <Tooltip title="Cerrar editor">
+              <Tooltip title={t("home.closeEditor")}>
                 <IconButton
-                  aria-label="Cerrar editor de entidad"
+                  aria-label={t("home.closeEditorAria")}
                   className="entity-editor__close"
                   size="small"
                   onClick={() => setSelectedEntityUuid(null)}
@@ -883,17 +926,14 @@ function HomePage() {
               />
             ) : (
               <div className="entity-editor__empty">
-                <p>
-                  Seleccioná una entidad en el mapa para editarla o creá una
-                  nueva.
-                </p>
+                <p>{t("home.emptyEditor")}</p>
                 <Button
                   variant="contained"
                   color="success"
                   startIcon={<AddIcon />}
                   onClick={addEntity}
                 >
-                  Agregar entidad
+                  {t("home.addEntity")}
                 </Button>
               </div>
             )}
@@ -921,11 +961,11 @@ function HomePage() {
           <div>
             {database === "MONGODB"
               ? graphQlMode
-                ? "Proyecto GraphQL generado con MongoDB. Incluye GraphiQL en /graphiql; los tests usan Testcontainers y requieren Docker."
-                : "Proyecto MongoDB generado. Los tests usan Testcontainers y requieren Docker."
+                ? t("home.downloaded.mongoGraphql")
+                : t("home.downloaded.mongo")
               : graphQlMode
-                ? `Proyecto GraphQL generado con ${database}. Incluye el esquema y GraphiQL en /graphiql. Los tests usan H2 en memoria.`
-                : `Proyecto generado con ${database}. Los tests usan H2 en memoria.`}
+                ? t("home.downloaded.graphql", { database })
+                : t("home.downloaded.sql", { database })}
           </div>
         </Alert>
       </Snackbar>
@@ -941,11 +981,11 @@ function HomePage() {
       >
         <DialogTitle className="compatibility-dialog__title">
           <span className="compatibility-dialog__eyebrow">
-            Advertencia de compatibilidad
+            {t("home.warning.eyebrow")}
           </span>
           <Typography className="compatibility-dialog__heading">
             <WarningAmberIcon className="compatibility-dialog__icon" />
-            MongoDB no soporta relaciones SQL
+            {t("home.mongoDialog.title")}
           </Typography>
         </DialogTitle>
         <DialogContent
@@ -953,14 +993,10 @@ function HomePage() {
           dividers
         >
           <p className="compatibility-dialog__intro">
-            Detectamos {relationAttributeCount}{" "}
-            {relationAttributeCount === 1 ? "relación" : "relaciones"} SQL en el
-            mapa. MongoDB usa composiciones con documentos embebidos, así que
-            esas relaciones no serán válidas para este motor.
+            {t("home.mongoDialog.intro", { count: relationAttributeCount })}
           </p>
           <p className="compatibility-dialog__note">
-            No se eliminarán automáticamente. Podés convertirlas en
-            composiciones o volver a una base SQL antes de crear el proyecto.
+            {t("home.mongoDialog.note")}
           </p>
         </DialogContent>
         <DialogActions className="compatibility-dialog__actions">
@@ -971,14 +1007,14 @@ function HomePage() {
               setPendingDatabase(null);
             }}
           >
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             className="compatibility-dialog__confirm"
             variant="contained"
             onClick={confirmMongoSelection}
           >
-            Usar MongoDB igual
+            {t("home.mongoDialog.confirm")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -994,11 +1030,11 @@ function HomePage() {
       >
         <DialogTitle className="compatibility-dialog__title">
           <span className="compatibility-dialog__eyebrow">
-            Advertencia de compatibilidad
+            {t("home.warning.eyebrow")}
           </span>
           <Typography className="compatibility-dialog__heading">
             <WarningAmberIcon className="compatibility-dialog__icon" />
-            Las bases SQL no soportan composiciones
+            {t("home.sqlDialog.title")}
           </Typography>
         </DialogTitle>
         <DialogContent
@@ -1006,20 +1042,13 @@ function HomePage() {
           dividers
         >
           <p className="compatibility-dialog__intro">
-            Detectamos {compositionAttributeCount}{" "}
-            {compositionAttributeCount === 1
-              ? "composición"
-              : "composiciones"}{" "}
-            y {embeddedEntityCount}{" "}
-            {embeddedEntityCount === 1
-              ? "entidad embebida"
-              : "entidades embebidas"}{" "}
-            de MongoDB.
+            {t("home.sqlDialog.intro", {
+              compositions: compositionAttributeCount,
+              embedded: embeddedEntityCount,
+            })}
           </p>
           <p className="compatibility-dialog__note">
-            Al continuar, las entidades embebidas volverán a ser entidades raíz.
-            Las composiciones no se eliminarán automáticamente y deberás
-            convertirlas a relaciones SQL o borrarlas.
+            {t("home.sqlDialog.note")}
           </p>
         </DialogContent>
         <DialogActions className="compatibility-dialog__actions">
@@ -1030,21 +1059,21 @@ function HomePage() {
               setPendingDatabase(null);
             }}
           >
-            Cancelar
+            {t("common.cancel")}
           </Button>
           <Button
             className="compatibility-dialog__confirm"
             variant="contained"
             onClick={confirmSqlSelection}
           >
-            Usar base SQL igual
+            {t("home.sqlDialog.confirm")}
           </Button>
         </DialogActions>
       </Dialog>
-      <Tooltip title="Ver qué incluye el proyecto generado" placement="left">
+      <Tooltip title={t("home.help.tooltip")} placement="left">
         <Fab
           className="help-fab"
-          aria-label="Ver detalle del proyecto que se genera"
+          aria-label={t("home.help.aria")}
           onClick={() => setHelpOpen(true)}
         >
           <HelpOutlineIcon />
@@ -1058,178 +1087,137 @@ function HomePage() {
         PaperProps={{ className: "help-dialog-paper" }}
       >
         <DialogTitle className="help-dialog__title">
-          <span className="help-dialog__eyebrow">QUÉ VAS A DESCARGAR</span>
+          <span className="help-dialog__eyebrow">
+            {t("home.help.eyebrow")}
+          </span>
           <Typography className="help-dialog__heading">
-            Detalle del proyecto generado
+            {t("home.help.title")}
           </Typography>
         </DialogTitle>
         <DialogContent className="help-dialog__content" dividers>
           <p className="help-dialog__intro">
-            Al presionar <strong>Crear proyecto</strong> se descarga un archivo
-            ZIP con un proyecto Maven de Spring Boot 4.1.2, generado a partir
-            del nombre del proyecto, la base de datos elegida, el tipo de API
-            (REST o GraphQL) y las entidades definidas en el mapa.
+            <RichText text={t("home.help.intro")} />
           </p>
 
           <section className="help-dialog__section">
-            <h3>Proyecto base</h3>
+            <h3>{t("home.help.base.title")}</h3>
             <ul>
               <li>
-                <strong>pom.xml</strong> con las dependencias de Spring Web,
-                Spring Data JPA o MongoDB, validaciones y el driver de la base
-                elegida.
+                <RichText text={t("home.help.base.pom")} />
               </li>
               <li>
-                Clase principal de Spring Boot, manejador global de errores
-                {graphQlMode ? " para GraphQL" : " para REST"}, configuración de
-                la aplicación, README y .gitignore.
+                <RichText
+                  text={
+                    graphQlMode
+                      ? t("home.help.base.mainGraphql")
+                      : t("home.help.base.mainRest")
+                  }
+                />
               </li>
               <li>
-                <strong>docker-compose.yml</strong> cuando la base necesita
-                servidor (PostgreSQL, MariaDB, MySQL o MongoDB).
+                <RichText text={t("home.help.base.compose")} />
               </li>
             </ul>
           </section>
 
           <section className="help-dialog__section">
-            <h3>API {graphQlMode ? "GraphQL" : "REST"}</h3>
+            <h3>
+              {t("home.help.api.title", {
+                api: graphQlMode ? "GraphQL" : "REST",
+              })}
+            </h3>
             {graphQlMode ? (
               <ul>
                 <li>
-                  Un <strong>controller GraphQL</strong> por entidad raíz con
-                  queries <code>findAll...</code> / <code>find...ById</code> y
-                  mutations <code>create...</code>, <code>update...</code> y{" "}
-                  <code>delete...</code>.
+                  <RichText text={t("home.help.graphql.controller")} />
                 </li>
                 <li>
-                  Esquema en{" "}
-                  <code>src/main/resources/graphql/schema.graphqls</code> con
-                  los tipos, inputs, <code>Query</code> y <code>Mutation</code>.
+                  <RichText text={t("home.help.graphql.schema")} />
                 </li>
                 <li>
-                  Endpoint GraphQL en <code>/graphql</code>.
+                  <RichText text={t("home.help.graphql.endpoint")} />
                 </li>
                 <li>
-                  <strong>GraphiQL</strong> habilitado en{" "}
-                  <code>/graphiql</code>: es una interfaz web para explorar el
-                  esquema y probar queries y mutations con autocompletado, sin
-                  necesidad de escribir las peticiones HTTP a mano. Es una
-                  herramienta de desarrollo, no forma parte de la API, y podés
-                  deshabilitarla con{" "}
-                  <code>spring.graphql.graphiql.enabled=false</code>.
+                  <RichText text={t("home.help.graphql.graphiql")} />
                 </li>
                 <li>
-                  Los tipos <code>Date</code>, <code>DateTime</code>,{" "}
-                  <code>Time</code>, <code>BigDecimal</code> y <code>UUID</code>{" "}
-                  se exponen como <strong>scalars GraphQL</strong>.
+                  <RichText text={t("home.help.graphql.scalars")} />
                 </li>
               </ul>
             ) : (
               <ul>
                 <li>
-                  Un <strong>controller REST</strong> por entidad con endpoints
-                  bajo <code>/api/nombreEntidad</code>.
+                  <RichText text={t("home.help.rest.controller")} />
                 </li>
                 <li>
-                  <strong>Swagger UI</strong> en{" "}
-                  <code>/swagger-ui.html</code> y el contrato OpenAPI en{" "}
-                  <code>/v3/api-docs</code>.
+                  <RichText text={t("home.help.rest.swagger")} />
                 </li>
                 <li>
-                  Manejador global de errores para devolver HTTP 400 con el
-                  detalle de la validación.
+                  <RichText text={t("home.help.rest.errors")} />
                 </li>
               </ul>
             )}
             <p className="help-dialog__intro">
-              En SQL las relaciones se envían por ID:{" "}
-              <code>categoriaId</code> para N:1 y 1:1, y{" "}
-              <code>etiquetasIds</code> para listas (1:N y N:M). En MongoDB las
-              composiciones se envían como objetos anidados.
+              <RichText text={t("home.help.relations")} />
             </p>
           </section>
 
           <section className="help-dialog__section">
-            <h3>Por cada entidad</h3>
+            <h3>{t("home.help.entity.title")}</h3>
             <ul>
               <li>
-                <strong>Domain:</strong> clase JPA o documento MongoDB con su
-                id, fechaCreacion, atributos y, en SQL, relaciones. Soporta
-                String, Integer, Long, Boolean, Date, DateTime, Time, Decimal,
-                Double y UUID. Las entidades embebidas de MongoDB no llevan id
-                ni fechaCreacion.
+                <RichText text={t("home.help.entity.domain")} />
               </li>
               <li>
-                <strong>Repository</strong> y <strong>Service</strong> con las
-                validaciones configuradas y, en SQL, guardado en cascada de
-                entidades relacionadas.
+                <RichText text={t("home.help.entity.repository")} />
               </li>
               <li>
-                <strong>Controller {graphQlMode ? "GraphQL" : "REST"}</strong>{" "}
-                {graphQlMode
-                  ? "con queries y mutations que delegan en el service de la entidad."
-                  : "con endpoints bajo /api/nombreEntidad."}
+                <RichText
+                  text={
+                    graphQlMode
+                      ? t("home.help.entity.controllerGraphql")
+                      : t("home.help.entity.controllerRest")
+                  }
+                />
               </li>
               <li>
-                <strong>Tests y builders</strong> para el service de cada
-                entidad.
+                <RichText text={t("home.help.entity.tests")} />
               </li>
             </ul>
           </section>
 
           <section className="help-dialog__section">
-            <h3>Base de datos y esquema</h3>
+            <h3>{t("home.help.database.title")}</h3>
             <ul>
               <li>
-                Configuración de conexión y driver para PostgreSQL, MariaDB,
-                MySQL, SQLite, H2 o MongoDB.
+                <RichText text={t("home.help.database.config")} />
               </li>
               <li>
-                <strong>schema.sql</strong> con tablas, claves primarias y
-                foreign keys para las bases SQL. MongoDB no usa schema: las
-                colecciones se crean al insertar.
+                <RichText text={t("home.help.database.schema")} />
               </li>
               <li>
-                Con H2 se habilita la consola en <code>/h2-console</code> y la
-                base se crea automáticamente.
+                <RichText text={t("home.help.database.h2")} />
               </li>
               <li>
-                Los tipos Date, DateTime, Time, Decimal, Double y UUID se
-                traducen al tipo nativo de cada motor SQL y se persisten como
-                fecha, decimal, número o UUID en MongoDB.
+                <RichText text={t("home.help.database.types")} />
               </li>
             </ul>
           </section>
 
           <section className="help-dialog__section">
-            <h3>Relaciones y composiciones</h3>
+            <h3>{t("home.help.links.title")}</h3>
             <ul>
               <li>
-                En las bases SQL, las relaciones <strong>CUSTOM</strong> se
-                generan como <code>@ManyToOne</code>, las{" "}
-                <strong>CUSTOM_LIST</strong> como <code>@OneToMany</code>, las{" "}
-                <strong>CUSTOM_ONE_TO_ONE</strong> como <code>@OneToOne</code>{" "}
-                con foreign key única y las{" "}
-                <strong>CUSTOM_MANY_TO_MANY</strong> como{" "}
-                <code>@ManyToMany</code> con tabla intermedia.
+                <RichText text={t("home.help.links.sql")} />
               </li>
               <li>
-                En MongoDB, las composiciones{" "}
-                <strong>COMPOSITION</strong> y{" "}
-                <strong>COMPOSITION_LIST</strong> generan documentos embebidos.
-                La entidad embebida no tiene colección, repository, service ni
-                controller propio.
+                <RichText text={t("home.help.links.mongo")} />
               </li>
             </ul>
           </section>
 
           <p className="help-dialog__note">
-            Los campos <strong>id</strong> y <strong>fechaCreacion</strong> son
-            reservados y se agregan automáticamente en las entidades raíz. En
-            SQL los tests usan H2 en memoria; en MongoDB usan Testcontainers y
-            requieren Docker. Los builders genéricos inicializan las relaciones
-            y composiciones (incluidas las referencias inversas) para que los
-            tests funcionen aunque haya validaciones sobre esos atributos.
+            <RichText text={t("home.help.note")} />
           </p>
         </DialogContent>
         <DialogActions className="help-dialog__actions">
@@ -1239,7 +1227,7 @@ function HomePage() {
             color="success"
             onClick={() => setHelpOpen(false)}
           >
-            Entendido
+            {t("home.help.accept")}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1270,8 +1258,8 @@ function HomePage() {
         initialName={businessName}
         description={
           pendingAfterSave
-            ? "Para abrir el proyecto elegido primero guardá el trabajo actual con un nombre."
-            : "Guardá el trabajo actual para poder retomarlo después."
+            ? t("saveDialog.descriptionPending")
+            : t("saveDialog.descriptionDefault")
         }
         onCancel={cancelSaveDialog}
         onConfirm={handleSaveDialogConfirm}

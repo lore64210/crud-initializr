@@ -8,6 +8,7 @@ import {
   Typography,
 } from "@mui/material";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { useLanguage } from "../i18n/LanguageContext";
 import "../css/app.css";
 
 const OpenProjectDialog = ({
@@ -18,6 +19,7 @@ const OpenProjectDialog = ({
   onDiscard,
   onSaveAndContinue,
 }) => {
+  const { t } = useLanguage();
   const isNew = !project;
   const currentUnnamed = !String(currentName || "").trim();
 
@@ -32,31 +34,33 @@ const OpenProjectDialog = ({
       }}
     >
       <DialogTitle className="project-dialog__title">
-        <span className="project-dialog__eyebrow">REEMPLAZAR CONFIGURACIÓN</span>
+        <span className="project-dialog__eyebrow">
+          {t("openDialog.eyebrow")}
+        </span>
         <Typography className="project-dialog__heading">
           <WarningAmberIcon className="project-dialog__icon project-dialog__icon--warning" />
-          {isNew ? "Empezar un proyecto nuevo" : `Abrir «${project.name}»`}
+          {isNew
+            ? t("openDialog.newTitle")
+            : t("openDialog.openTitle", { name: project.name })}
         </Typography>
       </DialogTitle>
       <DialogContent className="project-dialog__content" dividers>
         <p className="project-dialog__intro">
-          {isNew
-            ? "Se vaciará la configuración actual para empezar de cero: nombre, entidades, base de datos, API y cache."
-            : "Se reemplazará la configuración actual con la del proyecto guardado: nombre, entidades, base de datos, API y cache."}
+          {isNew ? t("openDialog.newIntro") : t("openDialog.openIntro")}
         </p>
         <p className="project-dialog__note">
-          Los cambios sin guardar se pierden.{" "}
+          {t("openDialog.note")}{" "}
           {currentUnnamed
-            ? "El trabajo actual no tiene nombre: podés descartarlo o escribir uno para guardarlo."
-            : "Podés guardar el trabajo actual antes de continuar."}
+            ? t("openDialog.noteUnnamed")
+            : t("openDialog.noteNamed")}
         </p>
       </DialogContent>
       <DialogActions className="project-dialog__actions">
         <Button className="project-dialog__cancel" onClick={onCancel}>
-          Cancelar
+          {t("common.cancel")}
         </Button>
         <Button className="project-dialog__discard" onClick={onDiscard}>
-          Descartar cambios
+          {t("openDialog.discard")}
         </Button>
         <Button
           className="project-dialog__confirm"
@@ -64,7 +68,7 @@ const OpenProjectDialog = ({
           color="success"
           onClick={onSaveAndContinue}
         >
-          Guardar y continuar
+          {t("openDialog.saveAndContinue")}
         </Button>
       </DialogActions>
     </Dialog>

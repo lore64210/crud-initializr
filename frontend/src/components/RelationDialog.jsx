@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import { formatStringToCamelCase } from "../service/service";
+import { useLanguage } from "../i18n/LanguageContext";
 import "../css/app.css";
 
 const RelationDialog = ({
@@ -31,6 +32,7 @@ const RelationDialog = ({
   onSave,
   onDelete,
 }) => {
+  const { t } = useLanguage();
   const [name, setName] = useState(initialName);
   const [type, setType] = useState(initialType);
   const [error, setError] = useState("");
@@ -50,14 +52,14 @@ const RelationDialog = ({
   const targetInvalid = isMongo && !targetEmbedded;
   const relationTypes = isMongo
     ? [
-        { value: "COMPOSITION", label: "1:1 · Embebido" },
-        { value: "COMPOSITION_LIST", label: "1:N · Lista" },
+        { value: "COMPOSITION", label: t("relation.type.mongoEmbedded") },
+        { value: "COMPOSITION_LIST", label: t("relation.type.mongoList") },
       ]
     : [
-        { value: "CUSTOM", label: "N:1 · Muchos a uno" },
-        { value: "CUSTOM_LIST", label: "1:N · Uno a muchos" },
-        { value: "CUSTOM_ONE_TO_ONE", label: "1:1 · Uno a uno" },
-        { value: "CUSTOM_MANY_TO_MANY", label: "N:M · Muchos a muchos" },
+        { value: "CUSTOM", label: t("relation.type.manyToOne") },
+        { value: "CUSTOM_LIST", label: t("relation.type.oneToMany") },
+        { value: "CUSTOM_ONE_TO_ONE", label: t("relation.type.oneToOne") },
+        { value: "CUSTOM_MANY_TO_MANY", label: t("relation.type.manyToMany") },
       ];
   const normalize = (value) => formatStringToCamelCase(value).toLowerCase();
 
@@ -73,7 +75,7 @@ const RelationDialog = ({
 
   const save = () => {
     if (targetInvalid) {
-      setError("La entidad destino debe ser un documento embebido");
+      setError(t("relation.error.targetEmbedded"));
       return;
     }
 
@@ -81,15 +83,15 @@ const RelationDialog = ({
     const normalized = formatStringToCamelCase(trimmed);
 
     if (!trimmed) {
-      setError("El nombre no puede estar vacío");
+      setError(t("relation.error.nameEmpty"));
       return;
     }
     if (!/^[A-Za-z][A-Za-z0-9]*$/.test(normalized)) {
-      setError("El nombre debe empezar con una letra");
+      setError(t("relation.error.nameStartsWithLetter"));
       return;
     }
     if (normalized.length > 30) {
-      setError("El nombre no puede tener más de 30 caracteres");
+      setError(t("relation.error.nameTooLong"));
       return;
     }
     if (
@@ -97,7 +99,7 @@ const RelationDialog = ({
         (otherName) => normalize(otherName) === normalized.toLowerCase(),
       )
     ) {
-      setError(`Ya existe un atributo con ese nombre en ${sourceName}`);
+      setError(t("relation.error.nameDuplicate", { source: sourceName }));
       return;
     }
 
@@ -116,7 +118,9 @@ const RelationDialog = ({
     >
       <DialogTitle className="relation-dialog__heading">
         <span className="relation-dialog__eyebrow">
-          {mode === "edit" ? "EDITAR RELACIÓN" : "NUEVA RELACIÓN"}
+          {mode === "edit"
+            ? t("relation.eyebrowEdit")
+            : t("relation.eyebrowCreate")}
         </span>
         <span className="relation-dialog__route">
           <span>{sourceName}</span>
@@ -128,8 +132,7 @@ const RelationDialog = ({
       <DialogContent className="relation-dialog__content">
         {confirmDelete ? (
           <Alert severity="warning" variant="outlined">
-            Se va a eliminar el atributo «{initialName}» de {sourceName}. Esta
-            acción no se puede deshacer.
+            {t("relation.deleteWarning", { name: initialName, source: sourceName })}
           </Alert>
         ) : (
           <>
@@ -138,14 +141,14 @@ const RelationDialog = ({
               fullWidth
               size="small"
               color="success"
-              label="Nombre del atributo"
+              label={t("relation.nameLabel")}
               value={name}
               error={!!error}
               helperText={
                 error ||
                 (mode === "create"
-                  ? "Se agrega como atributo de la entidad origen."
-                  : "Nombre del atributo en la entidad origen.")
+                  ? t("relation.helperCreate")
+                  : t("relation.helperEdit"))
               }
               onChange={({ target: { value } }) => {
                 setName(value);
@@ -161,7 +164,9 @@ const RelationDialog = ({
             />
 
             <Typography className="relation-dialog__label">
-              {isMongo ? "Tipo de composición" : "Tipo de relación"}
+              {isMongo
+                ? t("relation.typeComposition")
+                : t("relation.typeRelation")}
             </Typography>
             <ToggleButtonGroup
               exclusive
@@ -183,22 +188,20 @@ const RelationDialog = ({
 
             {targetInvalid && (
               <Alert severity="warning" variant="outlined" sx={{ mt: 2 }}>
-                La entidad «{targetName}» debe estar marcada como documento
-                embebido para usarla en una composición.
+                {t("relation.targetInvalid", { name: targetName })}
               </Alert>
             )}
 
             {!targetExists && (
               <Alert severity="warning" variant="outlined" sx={{ mt: 2 }}>
-                La entidad «{targetName}» no existe. La relación va a quedar sin
-                destino hasta que crees esa entidad.
+                {t("relation.targetMissing", { name: targetName })}
               </Alert>
             )}
 
             <Typography className="relation-dialog__hint">
               {mode === "create"
-                ? `También podés ajustar esta relación desde el formulario de ${sourceName}.`
-                : "También podés arrastrar el extremo de la relación en el mapa para cambiar la entidad destino."}
+                ? t("relation.hintCreate", { source: sourceName })
+                : t("relation.hintEdit")}
             </Typography>
           </>
         )}
@@ -208,10 +211,10 @@ const RelationDialog = ({
         {confirmDelete ? (
           <>
             <Button color="inherit" onClick={() => setConfirmDelete(false)}>
-              Volver
+              {t("relation.back")}
             </Button>
             <Button color="error" variant="contained" onClick={onDelete}>
-              Eliminar
+              {t("common.delete")}
             </Button>
           </>
         ) : (
@@ -223,11 +226,11 @@ const RelationDialog = ({
                 onClick={() => setConfirmDelete(true)}
                 sx={{ marginRight: "auto" }}
               >
-                Eliminar relación
+                {t("relation.deleteRelation")}
               </Button>
             )}
             <Button color="inherit" onClick={onClose}>
-              Cancelar
+              {t("common.cancel")}
             </Button>
             <Button
               color="success"
@@ -236,10 +239,10 @@ const RelationDialog = ({
               disabled={targetInvalid}
             >
               {mode === "edit"
-                ? "Guardar"
+                ? t("common.save")
                 : isMongo
-                  ? "Crear composición"
-                  : "Crear relación"}
+                  ? t("relation.createComposition")
+                  : t("relation.createRelation")}
             </Button>
           </>
         )}

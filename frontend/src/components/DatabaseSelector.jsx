@@ -2,6 +2,7 @@ import React from "react";
 import { Typography } from "@mui/material";
 import StorageIcon from "@mui/icons-material/Storage";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
+import { useLanguage } from "../i18n/LanguageContext";
 import "../css/app.css";
 
 const DATABASES = [
@@ -9,47 +10,48 @@ const DATABASES = [
     value: "POSTGRESQL",
     label: "PostgreSQL",
     tag: "SQL",
-    hint: "Recomendada para producción",
-    note: "Recomendada para producción. El proyecto incluye Docker Compose y los tests usan H2 en memoria.",
+    hintKey: "database.postgres.hint",
+    noteKey: "database.postgres.note",
   },
   {
     value: "MARIADB",
     label: "MariaDB",
     tag: "SQL",
-    hint: "Compatible con MySQL",
-    note: "Compatible con MySQL. El proyecto incluye Docker Compose y los tests usan H2 en memoria.",
+    hintKey: "database.mariadb.hint",
+    noteKey: "database.mariadb.note",
   },
   {
     value: "MYSQL",
     label: "MySQL",
     tag: "SQL",
-    hint: "Servidor · Docker",
-    note: "La opción clásica. El proyecto incluye Docker Compose y los tests usan H2 en memoria.",
+    hintKey: "database.mysql.hint",
+    noteKey: "database.mysql.note",
   },
   {
     value: "SQLITE",
     label: "SQLite",
     tag: "FILE",
-    hint: "Archivo local, sin servidor",
-    note: "Archivo local, sin servidor. La conexión habilita foreign_keys y los tests usan H2 en memoria.",
+    hintKey: "database.sqlite.hint",
+    noteKey: "database.sqlite.note",
   },
   {
     value: "H2",
     label: "H2",
     tag: "DEV",
-    hint: "Embebida, sin servidor",
-    note: "Embebida: ideal para probar sin instalar nada. Incluye consola H2 y los tests usan H2 en memoria.",
+    hintKey: "database.h2.hint",
+    noteKey: "database.h2.note",
   },
   {
     value: "MONGODB",
     label: "MongoDB",
     tag: "NoSQL",
-    hint: "Documental con composiciones",
-    note: "Documental: entidades raíz y composiciones con documentos embebidos. Incluye Docker Compose y tests con Testcontainers.",
+    hintKey: "database.mongodb.hint",
+    noteKey: "database.mongodb.note",
   },
 ];
 
 const DatabaseSelector = ({ value, onChange, warning }) => {
+  const { t } = useLanguage();
   const selectedDatabase =
     DATABASES.find((database) => database.value === value) ?? DATABASES[0];
 
@@ -59,11 +61,10 @@ const DatabaseSelector = ({ value, onChange, warning }) => {
         <StorageIcon className="database-selector__icon" />
         <div className="database-selector__titles">
           <Typography className="database-selector__title">
-            Base de datos
+            {t("database.title")}
           </Typography>
           <Typography className="database-selector__subtitle">
-            El proyecto se genera con la configuración y la capa de persistencia
-            de este motor.
+            {t("database.subtitle")}
           </Typography>
         </div>
       </div>
@@ -71,17 +72,18 @@ const DatabaseSelector = ({ value, onChange, warning }) => {
       <div
         className="database-selector__options"
         role="radiogroup"
-        aria-label="Base de datos"
+        aria-label={t("database.aria")}
       >
         {DATABASES.map((database) => {
           const selected = value === database.value;
+          const hint = t(database.hintKey);
           return (
             <button
               key={database.value}
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={`${database.label}: ${database.hint}`}
+              aria-label={`${database.label}: ${hint}`}
               className={`database-option${
                 selected ? " database-option--selected" : ""
               }`}
@@ -91,14 +93,14 @@ const DatabaseSelector = ({ value, onChange, warning }) => {
                 <span className="database-option__label">{database.label}</span>
                 <span className="database-option__tag">{database.tag}</span>
               </span>
-              <span className="database-option__hint">{database.hint}</span>
+              <span className="database-option__hint">{hint}</span>
             </button>
           );
         })}
       </div>
 
       <Typography className="database-selector__note">
-        {selectedDatabase.note}
+        {t(selectedDatabase.noteKey)}
       </Typography>
 
       {warning && (

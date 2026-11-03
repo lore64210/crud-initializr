@@ -11,6 +11,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AttributeForm from "./AttributeForm";
+import { useLanguage } from "../i18n/LanguageContext";
 import "../css/app.css";
 
 const EntityForm = ({
@@ -27,6 +28,8 @@ const EntityForm = ({
   onDeleteAttribute,
   onDelete,
 }) => {
+  const { t } = useLanguage();
+
   return (
     <Card id={`entity-card-${entity.uuid}`} className="card">
       <div className="form-header">
@@ -35,13 +38,13 @@ const EntityForm = ({
           size="small"
           className="input name-input"
           id={"entity-name-" + entity.uuid}
-          label="Nombre de la entidad de dominio"
+          label={t("entity.nameLabel")}
           variant="outlined"
           value={entity.entityName}
           onChange={({ target: { value } }) => onChangeEntityName(value)}
         />
         <IconButton
-          aria-label={`Eliminar entidad ${entity.entityName}`}
+          aria-label={t("entity.deleteAria", { name: entity.entityName })}
           onClick={onDelete}
         >
           <DeleteIcon />
@@ -59,12 +62,12 @@ const EntityForm = ({
                 }
               />
             }
-            label="Documento embebido"
+            label={t("entity.embedded")}
           />
           <Typography variant="body2" color="text.secondary">
             {entity.embedded
-              ? "Se guarda dentro de otra entidad: no genera colección ni API propia."
-              : "Entidad raíz: genera colección, repository, service y controller."}
+              ? t("entity.embeddedTrue")
+              : t("entity.embeddedFalse")}
           </Typography>
         </div>
       )}
@@ -81,18 +84,18 @@ const EntityForm = ({
                 }
               />
             }
-            label="Cachear esta entidad"
+            label={t("entity.cacheLabel")}
           />
           <Typography variant="body2" color="text.secondary">
             {entity.cacheEnabled !== false
-              ? "Sus endpoints usan Redis para las lecturas y las escrituras invalidan el cache."
-              : "Sus endpoints no usan cache: siempre consultan la base de datos."}
+              ? t("entity.cacheTrue")
+              : t("entity.cacheFalse")}
           </Typography>
         </div>
       )}
 
       <Typography sx={{ marginTop: "1em" }}>
-        Atributos de la entidad:
+        {t("entity.attributes")}
       </Typography>
 
       {entity.attributes.map((attribute) => (
@@ -114,7 +117,7 @@ const EntityForm = ({
         startIcon={<AddIcon />}
         onClick={onAddAttribute}
       >
-        Agregar nuevo atributo
+        {t("entity.addAttribute")}
       </Button>
     </Card>
   );

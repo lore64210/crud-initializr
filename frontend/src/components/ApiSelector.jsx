@@ -1,6 +1,7 @@
 import React from "react";
 import { Typography } from "@mui/material";
 import ApiIcon from "@mui/icons-material/Api";
+import { useLanguage } from "../i18n/LanguageContext";
 import "../css/app.css";
 
 const APIS = [
@@ -8,19 +9,20 @@ const APIS = [
     value: "REST",
     label: "REST",
     tag: "HTTP",
-    hint: "Controllers REST por entidad",
-    note: "Genera un controller REST por entidad con endpoints bajo /api/nombreEntidad y un manejador global de errores.",
+    hintKey: "api.rest.hint",
+    noteKey: "api.rest.note",
   },
   {
     value: "GRAPHQL",
     label: "GraphQL",
     tag: "QUERY",
-    hint: "Esquema y controllers GraphQL",
-    note: "Genera un esquema GraphQL y un controller por entidad. Incluye GraphiQL en /graphiql para explorar el esquema y probar queries y mutations.",
+    hintKey: "api.graphql.hint",
+    noteKey: "api.graphql.note",
   },
 ];
 
 const ApiSelector = ({ value, onChange }) => {
+  const { t } = useLanguage();
   const selectedApi = APIS.find((api) => api.value === value) ?? APIS[0];
 
   return (
@@ -29,10 +31,10 @@ const ApiSelector = ({ value, onChange }) => {
         <ApiIcon className="database-selector__icon" />
         <div className="database-selector__titles">
           <Typography className="database-selector__title">
-            Tipo de API
+            {t("api.title")}
           </Typography>
           <Typography className="database-selector__subtitle">
-            Elegí cómo se exponen las operaciones CRUD de las entidades.
+            {t("api.subtitle")}
           </Typography>
         </div>
       </div>
@@ -40,17 +42,18 @@ const ApiSelector = ({ value, onChange }) => {
       <div
         className="database-selector__options"
         role="radiogroup"
-        aria-label="Tipo de API"
+        aria-label={t("api.aria")}
       >
         {APIS.map((api) => {
           const selected = value === api.value;
+          const hint = t(api.hintKey);
           return (
             <button
               key={api.value}
               type="button"
               role="radio"
               aria-checked={selected}
-              aria-label={`${api.label}: ${api.hint}`}
+              aria-label={`${api.label}: ${hint}`}
               className={`database-option${
                 selected ? " database-option--selected" : ""
               }`}
@@ -60,14 +63,14 @@ const ApiSelector = ({ value, onChange }) => {
                 <span className="database-option__label">{api.label}</span>
                 <span className="database-option__tag">{api.tag}</span>
               </span>
-              <span className="database-option__hint">{api.hint}</span>
+              <span className="database-option__hint">{hint}</span>
             </button>
           );
         })}
       </div>
 
       <Typography className="database-selector__note">
-        {selectedApi.note}
+        {t(selectedApi.noteKey)}
       </Typography>
     </div>
   );

@@ -6,9 +6,11 @@ import {
   Typography,
 } from "@mui/material";
 import CachedIcon from "@mui/icons-material/Cached";
+import { useLanguage } from "../i18n/LanguageContext";
 import "../css/app.css";
 
 const CacheSettings = ({ value, onChange, entities = [], onToggleEntity }) => {
+  const { t } = useLanguage();
   const update = (patch) => onChange({ ...value, ...patch });
   const rootEntities = entities.filter((entity) => !entity.embedded);
   const cachedCount = rootEntities.filter(
@@ -21,11 +23,10 @@ const CacheSettings = ({ value, onChange, entities = [], onToggleEntity }) => {
         <CachedIcon className="database-selector__icon" />
         <div className="database-selector__titles">
           <Typography className="database-selector__title">
-            Cache Redis
+            {t("cache.title")}
           </Typography>
           <Typography className="database-selector__subtitle">
-            Opcional. Agrega una capa de cache para las lecturas del proyecto
-            generado.
+            {t("cache.subtitle")}
           </Typography>
         </div>
       </div>
@@ -39,7 +40,7 @@ const CacheSettings = ({ value, onChange, entities = [], onToggleEntity }) => {
             onChange={({ target: { checked } }) => update({ enabled: checked })}
           />
         }
-        label="Habilitar cache Redis"
+        label={t("cache.enable")}
       />
 
       {value.enabled && (
@@ -49,18 +50,18 @@ const CacheSettings = ({ value, onChange, entities = [], onToggleEntity }) => {
               color="success"
               className="input"
               id="cache-prefix"
-              label="Prefijo de claves"
+              label={t("cache.prefix")}
               size="small"
               variant="outlined"
               value={value.prefix}
-              helperText="Ejemplo: crud"
+              helperText={t("cache.prefixExample")}
               onChange={({ target: { value: prefix } }) => update({ prefix })}
             />
             <TextField
               color="success"
               className="input"
               id="cache-ttl"
-              label="TTL (segundos)"
+              label={t("cache.ttl")}
               size="small"
               type="number"
               variant="outlined"
@@ -79,23 +80,26 @@ const CacheSettings = ({ value, onChange, entities = [], onToggleEntity }) => {
                   }
                 />
               }
-              label="Cachear listados"
+              label={t("cache.cacheLists")}
             />
           </div>
 
           <div className="cache-settings__entities">
             <div className="cache-settings__entities-header">
               <Typography className="cache-settings__entities-title">
-                Entidades a cachear
+                {t("cache.entitiesTitle")}
               </Typography>
               <Typography className="cache-settings__entities-count">
-                {cachedCount} de {rootEntities.length}
+                {t("cache.entitiesCount", {
+                  cached: cachedCount,
+                  total: rootEntities.length,
+                })}
               </Typography>
             </div>
 
             {rootEntities.length === 0 ? (
               <Typography className="database-selector__note">
-                Agregá al menos una entidad para poder cachearla.
+                {t("cache.empty")}
               </Typography>
             ) : (
               <div className="cache-settings__entity-list">
@@ -113,7 +117,9 @@ const CacheSettings = ({ value, onChange, entities = [], onToggleEntity }) => {
                         }
                       />
                     }
-                    label={entity.entityName.trim() || "Entidad sin nombre"}
+                    label={
+                      entity.entityName.trim() || t("home.unnamedEntity")
+                    }
                   />
                 ))}
               </div>
@@ -121,16 +127,14 @@ const CacheSettings = ({ value, onChange, entities = [], onToggleEntity }) => {
           </div>
 
           <Typography className="database-selector__note">
-            findById se cachea siempre en las entidades seleccionadas. Las
-            escrituras actualizan o invalidan el cache. Los tests generados usan
-            cache deshabilitado.
+            {t("cache.note")}
           </Typography>
         </>
       )}
 
       {!value.enabled && (
         <Typography className="database-selector__note">
-          El proyecto se genera sin Redis. Podés habilitarlo después.
+          {t("cache.disabledNote")}
         </Typography>
       )}
     </div>

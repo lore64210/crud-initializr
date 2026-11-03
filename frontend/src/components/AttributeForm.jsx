@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
+import { useLanguage } from "../i18n/LanguageContext";
 import "../css/app.css";
 
 const SQL_RELATION_TYPES = [
@@ -48,24 +49,6 @@ const TYPE_LABELS = {
   CUSTOM_LIST: "1:N",
   CUSTOM_ONE_TO_ONE: "1:1",
   CUSTOM_MANY_TO_MANY: "N:M",
-  COMPOSITION: "Composición 1:1",
-  COMPOSITION_LIST: "Composición 1:N",
-};
-
-const VALIDATION_LABELS = {
-  NOT_NULL: "Not null",
-  NOT_BLANK: "String no vacío",
-  NOT_EMPTY: "Lista no vacía",
-  PAST: "Fecha pasada",
-  PAST_OR_PRESENT: "Fecha pasada o presente",
-  FUTURE: "Fecha futura",
-  FUTURE_OR_PRESENT: "Fecha futura o presente",
-  POSITIVE: "Positivo",
-  NEGATIVE: "Negativo",
-  POSITIVE_OR_ZERO: "Positivo o cero",
-  NEGATIVE_OR_ZERO: "Negativo o cero",
-  MIN: "Mínimo",
-  MAX: "Máximo",
 };
 
 const AttributeForm = ({
@@ -77,6 +60,7 @@ const AttributeForm = ({
   onChange,
   onDelete,
 }) => {
+  const { t } = useLanguage();
   const isEmpty = !attribute.name.trim();
   const [expanded, setExpanded] = useState(false);
 
@@ -137,7 +121,16 @@ const AttributeForm = ({
     }
   };
 
-  const typeLabel = TYPE_LABELS[attribute.type] || attribute.type;
+  const validationLabel = (validation) =>
+    t(`validationLabel.${validation}`);
+
+  const typeLabel =
+    attribute.type === "COMPOSITION"
+      ? t("attribute.type.composition")
+      : attribute.type === "COMPOSITION_LIST"
+        ? t("attribute.type.compositionList")
+        : TYPE_LABELS[attribute.type] || attribute.type;
+
   const bodyId = `attribute-body-${attribute.uuid}`;
   const selectedTarget = entities.find(
     (entity) => entity.entityName === attribute.customType,
@@ -157,9 +150,14 @@ const AttributeForm = ({
 
   const validationOption = (value) => (
     <MenuItem value={value} disabled={attribute.validations.includes(value)}>
-      {VALIDATION_LABELS[value] || value}
+      {validationLabel(value)}
     </MenuItem>
   );
+
+  const unavailableReason = () =>
+    isMongo
+      ? t("attribute.reason.mongoUnavailable")
+      : t("attribute.reason.embeddedUnavailable");
 
   return (
     <Card
@@ -187,7 +185,7 @@ const AttributeForm = ({
               isEmpty ? " attribute-summary-name--empty" : ""
             }`}
           >
-            {isEmpty ? "Atributo sin nombre" : attribute.name}
+            {isEmpty ? t("attribute.unnamed") : attribute.name}
           </span>
           <span className="attribute-summary-tags">
             <Chip
@@ -199,7 +197,7 @@ const AttributeForm = ({
               <Chip
                 className="attribute-summary-chip attribute-summary-chip--relation"
                 size="small"
-                label={attribute.customType || "sin entidad"}
+                label={attribute.customType || t("attribute.noTarget")}
               />
             )}
             {!!attribute.validations.length && (
@@ -208,15 +206,19 @@ const AttributeForm = ({
                 size="small"
                 label={
                   attribute.validations.length === 1
-                    ? attribute.validations[0]
-                    : `${attribute.validations.length} validaciones`
+                    ? validationLabel(attribute.validations[0])
+                    : t("attribute.validationsCount", {
+                        count: attribute.validations.length,
+                      })
                 }
               />
             )}
           </span>
         </div>
         <IconButton
-          aria-label={`Eliminar atributo ${attribute.name || "sin nombre"}`}
+          aria-label={t("attribute.deleteAria", {
+            name: attribute.name || t("attribute.unnamed"),
+          })}
           size="small"
           onClick={(event) => {
             event.stopPropagation();
@@ -234,21 +236,21 @@ const AttributeForm = ({
             color="success"
             className="input"
             id={`attribute-name-${attribute.uuid}`}
-            label="Nombre del atributo"
+            label={t("attribute.nameLabel")}
             size="small"
             variant="outlined"
             value={attribute.name}
             onChange={({ target: { value } }) => changeName(value)}
           />
           <InputLabel id={`attribute-type-label-${attribute.uuid}`}>
-            Tipo del atributo
+            {t("attribute.typeLabel")}
           </InputLabel>
           <Select
             color="success"
             labelId={`attribute-type-label-${attribute.uuid}`}
             id={`attribute-type-${attribute.uuid}`}
             value={attribute.type}
-            label="Tipo"
+            label={t("attribute.type")}
             sx={{ width: "100%" }}
             size="small"
             onChange={({ target: { value } }) => changeType(value)}
@@ -269,47 +271,43 @@ const AttributeForm = ({
             <MenuItem value={"UUID"}>UUID</MenuItem>
             {typeOption(
               "CUSTOM",
-              "Relación N:1 · Muchos a uno",
+              t("attribute.typeOption.relationManyToOne"),
               isMongo || isEmbedded,
-              isMongo
-                ? "no disponible en MongoDB"
-                : "no disponible en embebidas",
+              unavailableReason(),
             )}
             {typeOption(
               "CUSTOM_LIST",
-              "Relación 1:N · Uno a muchos",
+              t("attribute.typeOption.relationOneToMany"),
               isMongo || isEmbedded,
-              isMongo
-                ? "no disponible en MongoDB"
-                : "no disponible en embebidas",
+              unavailableReason(),
             )}
             {typeOption(
               "CUSTOM_ONE_TO_ONE",
-              "Relación 1:1 · Uno a uno",
+              t("attribute.typeOption.relationOneToOne"),
               isMongo || isEmbedded,
-              isMongo
-                ? "no disponible en MongoDB"
-                : "no disponible en embebidas",
+              unavailableReason(),
             )}
             {typeOption(
               "CUSTOM_MANY_TO_MANY",
-              "Relación N:M · Muchos a muchos",
+              t("attribute.typeOption.relationManyToMany"),
               isMongo || isEmbedded,
-              isMongo
-                ? "no disponible en MongoDB"
-                : "no disponible en embebidas",
+              unavailableReason(),
             )}
             {typeOption(
               "COMPOSITION",
-              "Composición 1:1 · Documento embebido",
+              t("attribute.typeOption.composition"),
               !isMongo || isEmbedded,
-              !isMongo ? "solo MongoDB" : "no disponible en embebidas",
+              !isMongo
+                ? t("attribute.reason.mongoOnly")
+                : t("attribute.reason.embeddedUnavailable"),
             )}
             {typeOption(
               "COMPOSITION_LIST",
-              "Composición 1:N · Lista de documentos",
+              t("attribute.typeOption.compositionList"),
               !isMongo || isEmbedded,
-              !isMongo ? "solo MongoDB" : "no disponible en embebidas",
+              !isMongo
+                ? t("attribute.reason.mongoOnly")
+                : t("attribute.reason.embeddedUnavailable"),
             )}
           </Select>
 
@@ -318,8 +316,7 @@ const AttributeForm = ({
               variant="body2"
               sx={{ color: "text.secondary", fontSize: "0.75rem" }}
             >
-              Los documentos embebidos solo admiten campos simples en esta
-              versión.
+              {t("attribute.embeddedSimple")}
             </Typography>
           )}
 
@@ -328,8 +325,7 @@ const AttributeForm = ({
               variant="body2"
               sx={{ color: "warning.main", fontSize: "0.75rem" }}
             >
-              Una entidad embebida no puede tener relaciones ni composiciones.
-              Cambiá este atributo a un tipo simple.
+              {t("attribute.embeddedNoLinks")}
             </Typography>
           )}
 
@@ -339,8 +335,8 @@ const AttributeForm = ({
               sx={{ color: "warning.main", fontSize: "0.75rem" }}
             >
               {isMongo
-                ? "MongoDB no soporta relaciones SQL. Cambiá este atributo a una composición."
-                : "Las composiciones solo son válidas para MongoDB. Cambiá este atributo a una relación SQL."}
+                ? t("attribute.mongoNoRelations")
+                : t("attribute.sqlNoCompositions")}
             </Typography>
           )}
 
@@ -349,14 +345,14 @@ const AttributeForm = ({
               variant="body2"
               sx={{ color: "warning.main", fontSize: "0.75rem" }}
             >
-              La entidad destino debe estar marcada como documento embebido.
+              {t("attribute.targetMustBeEmbedded")}
             </Typography>
           )}
 
           {isLink && (
             <>
               <InputLabel id={`attribute-type-custom-label-${attribute.uuid}`}>
-                Entidad destino
+                {t("attribute.targetLabel")}
               </InputLabel>
               <Select
                 color="success"
@@ -364,13 +360,13 @@ const AttributeForm = ({
                 id={`attribute-type-custom-${attribute.uuid}`}
                 value={attribute.customType || ""}
                 displayEmpty
-                label="Entidad destino"
+                label={t("attribute.targetLabel")}
                 size="small"
                 sx={{ width: "100%" }}
                 onChange={({ target: { value } }) => changeCustomType(value)}
               >
                 <MenuItem value={""} disabled>
-                  Seleccionar entidad
+                  {t("attribute.selectEntity")}
                 </MenuItem>
                 {entities
                   .filter(
@@ -388,7 +384,7 @@ const AttributeForm = ({
                       >
                         {entity.entityName}
                         {unavailableForComposition
-                          ? " · marcá la entidad como embebida"
+                          ? t("attribute.markAsEmbedded")
                           : ""}
                       </MenuItem>
                     );
@@ -398,7 +394,7 @@ const AttributeForm = ({
           )}
 
           <InputLabel id={`attribute-validations-label-${attribute.uuid}`}>
-            Validaciones
+            {t("attribute.validations")}
           </InputLabel>
           <Select
             color="success"
@@ -406,13 +402,13 @@ const AttributeForm = ({
             id={`attribute-validations-${attribute.uuid}`}
             value=""
             displayEmpty
-            label="Validaciones"
+            label={t("attribute.validations")}
             size="small"
             sx={{ width: "100%" }}
             onChange={({ target: { value } }) => value && addValidation(value)}
           >
             <MenuItem value="" disabled>
-              Seleccionar validación
+              {t("attribute.selectValidation")}
             </MenuItem>
             {validationOption("NOT_NULL")}
             {attribute.type === "STRING" && validationOption("NOT_BLANK")}
@@ -442,7 +438,7 @@ const AttributeForm = ({
               <TextField
                 color="success"
                 className="input"
-                label="Valor mínimo"
+                label={t("attribute.min")}
                 type="number"
                 size="small"
                 variant="outlined"
@@ -459,7 +455,7 @@ const AttributeForm = ({
               <TextField
                 color="success"
                 className="input"
-                label="Valor máximo"
+                label={t("attribute.max")}
                 type="number"
                 size="small"
                 variant="outlined"
@@ -472,7 +468,7 @@ const AttributeForm = ({
             )}
           {!!attribute.validations.length && (
             <Typography variant="body2" sx={{ marginTop: "0.75em" }}>
-              Validaciones seleccionadas:
+              {t("attribute.selectedValidations")}
             </Typography>
           )}
           <div className="attribute-validation-chips">
@@ -481,10 +477,10 @@ const AttributeForm = ({
                 key={validation}
                 label={
                   validation === "MIN" && attribute.minValue !== ""
-                    ? `Mínimo: ${attribute.minValue}`
+                    ? t("attribute.minChip", { value: attribute.minValue })
                     : validation === "MAX" && attribute.maxValue !== ""
-                      ? `Máximo: ${attribute.maxValue}`
-                      : VALIDATION_LABELS[validation] || validation
+                      ? t("attribute.maxChip", { value: attribute.maxValue })
+                      : validationLabel(validation)
                 }
                 size="small"
                 onDelete={() => deleteValidation(validation)}

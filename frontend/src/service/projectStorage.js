@@ -1,5 +1,6 @@
 import uuid from "react-uuid";
 import { saveAs } from "file-saver";
+import { translate } from "../i18n/translations";
 
 const STORAGE_KEY = "crud-initializr.saved-projects.v1";
 const SCHEMA_VERSION = 1;
@@ -136,13 +137,13 @@ export const exportProjectsToFile = () => {
   saveAs(blob, "proyectos-initializr.json");
 };
 
-export const importProjectsFromText = (text) => {
+export const importProjectsFromText = (text, language = "es") => {
   let parsed;
 
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new Error("El archivo no es un JSON válido");
+    throw new Error(translate(language, "import.invalidJson"));
   }
 
   const incoming = Array.isArray(parsed)
@@ -152,7 +153,7 @@ export const importProjectsFromText = (text) => {
       : null;
 
   if (!incoming) {
-    throw new Error("El archivo no contiene una lista de proyectos");
+    throw new Error(translate(language, "import.noList"));
   }
 
   const normalized = incoming
@@ -161,7 +162,7 @@ export const importProjectsFromText = (text) => {
     .filter((item) => item.name);
 
   if (normalized.length === 0) {
-    throw new Error("No se encontraron proyectos válidos en el archivo");
+    throw new Error(translate(language, "import.noValidProjects"));
   }
 
   const projects = readStore();

@@ -1,4 +1,5 @@
 import { saveAs } from "file-saver";
+import { translate } from "../i18n/translations";
 
 const API_BASE_URL = (process.env.REACT_APP_API_URL || "").replace(/\/+$/, "");
 
@@ -66,7 +67,7 @@ const createRequestBody = (data) => ({
 });
 
 const service = {
-  createProject: async (data) => {
+  createProject: async (data, language = "es") => {
     try {
       const response = await fetch(`${API_BASE_URL}/api/domain`, {
         method: "POST",
@@ -75,24 +76,27 @@ const service = {
       });
 
       if (!response.ok) {
-        let error = "No se pudo crear el proyecto";
+        let error = translate(language, "service.createError");
         try {
           const body = await response.json();
           if (body?.error) {
             error = body.error;
           }
         } catch {
-          // La respuesta de error no era JSON.
+          // The error response was not JSON.
         }
         return { ok: false, error };
       }
 
       const blob = await response.blob();
-      const fileName = formatStringToCamelCase(data.businessName) || "proyecto";
+      const fileName = formatStringToCamelCase(data.businessName) || "project";
       saveAs(blob, `${fileName}.zip`);
       return { ok: true };
     } catch {
-      return { ok: false, error: "No se pudo conectar con el servidor" };
+      return {
+        ok: false,
+        error: translate(language, "service.connectionError"),
+      };
     }
   },
 };
