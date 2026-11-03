@@ -63,29 +63,35 @@ public class DomainService {
         validateCacheSettings(domain, cache);
 
         Path project = null;
+        String mainClass = StringUtils.toClassName(domain.getTitle()) + "Application";
+        String databaseName = StringUtils.toDatabaseName(domain.getTitle());
         try {
             project = fileUtils.createOutputFolder();
-            writeStaticFiles(project, database, apiType);
+            writeStaticFiles(project, database, apiType, mainClass);
             writeOpenApiConfig(domain.getTitle(), apiType, project);
             writeCacheConfig(cache, project);
             writeProjectReadme(domain.getTitle(), domain, database, apiType, cache, project);
             writeDockerCompose(domain.getTitle(), database, cache, project);
             writePomFile(domain.getTitle(), database, apiType, cache, project);
-            writeApplicationProperties(database, apiType, cache, project);
+            writeApplicationProperties(database, apiType, cache, databaseName, project);
             for (Entity entity : domain.getEntities()) {
                 writeDomainFile(entity, database, project);
                 writeServiceFile(entity, database, cache, project);
                 writeRepositoryFile(entity, database, project);
+                if (!database.isDocument() && !entity.isEmbedded()) {
+                    writeRequestFile(entity, project);
+                    writeMapperFile(entity, project);
+                }
                 if (apiType.isGraphQL()) {
                     writeGraphQlControllerFile(entity, database, project);
                 } else {
                     writeControllerFile(entity, database, project);
                 }
-                writeBuilderFile(entity, project);
+                writeBuilderFile(entity, domain, project);
                 writeTestFile(entity, database, project);
             }
             if (apiType.isGraphQL()) {
-                writeGraphQlSchema(domain, project);
+                writeGraphQlSchema(domain, database, project);
             }
             writeSchemaSQLFiles(domain, database, project);
             return project;
@@ -421,17 +427,19 @@ public class DomainService {
         }
     }
 
-    private void writeStaticFiles(Path project, DatabaseEnum database, ApiEnum apiType) throws IOException {
+    private void writeStaticFiles(Path project,
+                                  DatabaseEnum database,
+                                  ApiEnum apiType,
+                                  String mainClass) throws IOException {
+        writeMainClass(project, database, mainClass);
+
         if (database.isDocument()) {
-            fileUtils.copyTemplate(templatePath(database, srcPath + "/ProjectBaseApplication.java"),
-                    project, destinationPath(srcPath + "/ProjectBaseApplication.java"));
             fileUtils.copyTemplate(templatePath(database, testPath + "/tests/ApplicationTests.java"),
                     project, destinationPath(testPath + "/tests/ApplicationTests.java"));
             fileUtils.copyTemplate("/mongo/src/test/resources/application.properties",
                     project, "src/test/resources/application.properties");
         } else {
             List<String> templates = List.of(
-                    srcPath + "/ProjectBaseApplication.java",
                     testPath + "/tests/ApplicationTests.java",
                     "/src/test/resources/application.properties"
             );
@@ -447,6 +455,13 @@ public class DomainService {
             fileUtils.copyTemplate(srcPath + "/controller/advice/AdviceController.java", project);
         }
         fileUtils.copyTemplate("/gitignore.template", project, ".gitignore");
+    }
+
+    private void writeMainClass(Path project, DatabaseEnum database, String mainClass) throws IOException {
+        String content = fileUtils.getTemplateContent(
+                        templatePath(database, srcPath + "/ProjectBaseApplication.java"))
+                .replace("ProjectBaseApplication", mainClass);
+        fileUtils.writeFile(project + "/" + destinationPath(srcPath + "/" + mainClass + ".java"), content);
     }
 
     private void writeCacheConfig(CacheSettings cache, Path project) throws IOException {
@@ -552,12 +567,13 @@ public class DomainService {
     private void writeApplicationProperties(DatabaseEnum database,
                                             ApiEnum apiType,
                                             CacheSettings cache,
+                                            String databaseName,
                                             Path project) throws IOException {
         if (database.isDocument()) {
             String template = fileUtils.getTemplateContent("/mongo/src/main/resources/application.properties");
             String content = template
                     .replace("DATABASE_LABEL", database.getLabel())
-                    .replace("DATABASE_URL", "${MONGODB_URI:" + database.getJdbcUrl() + "}")
+                    .replace("DATABASE_URL", "${MONGODB_URI:" + database.jdbcUrl(databaseName) + "}")
                     .replace("GRAPHQL_PROPERTIES", graphQlProperties(apiType))
                     .replace("API_DOCS_PROPERTIES", apiDocsProperties(apiType))
                     .replace("CACHE_PROPERTIES", cacheProperties(cache));
@@ -568,7 +584,7 @@ public class DomainService {
         String template = fileUtils.getTemplateContent("/src/main/resources/application.properties");
         String content = template
                 .replace("DATABASE_LABEL", database.getLabel())
-                .replace("DATABASE_URL", "${DB_URL:" + database.getJdbcUrl() + "}")
+                .replace("DATABASE_URL", "${DB_URL:" + database.jdbcUrl(databaseName) + "}")
                 .replace("DATABASE_USERNAME", "${DB_USER:" + database.getUsername() + "}")
                 .replace("DATABASE_PASSWORD", "${DB_PASSWORD:" + database.getPassword() + "}")
                 .replace("DATABASE_EXTRA_PROPERTIES", extraProperties(database))
@@ -621,13 +637,16 @@ public class DomainService {
                                     ApiEnum apiType,
                                     CacheSettings cache,
                                     Path project) throws IOException {
+        String databaseName = StringUtils.toDatabaseName(title);
+        String mainClass = StringUtils.toClassName(title) + "Application";
         if (database.isDocument()) {
             String template = fileUtils.getTemplateContent("/mongo/README.md.template");
             String content = template
                     .replace("PROJECT_NAME", title.trim())
+                    .replace("PROJECT_CLASS", mainClass)
                     .replace("DATABASE_LABEL", database.getLabel())
-                    .replace("DATABASE_URL", database.getJdbcUrl())
-                    .replace("API_SECTION", apiSection(apiType))
+                    .replace("DATABASE_URL", database.jdbcUrl(databaseName))
+                    .replace("API_SECTION", apiSection(apiType) + "\n\n" + relationPayloadNote(database))
                     .replace("CACHE_SECTION", cacheSection(domain, cache))
                     .replace("API_RUN_INSTRUCTIONS", apiRunInstructions(apiType));
             fileUtils.writeFile(project + "/README.md", content);
@@ -637,20 +656,21 @@ public class DomainService {
         String template = fileUtils.getTemplateContent("/README.md.template");
         String runInstructions;
         if (database == DatabaseEnum.H2) {
-            runInstructions = h2RunInstructions();
+            runInstructions = h2RunInstructions(databaseName);
         } else if (database == DatabaseEnum.SQLITE) {
-            runInstructions = sqliteRunInstructions();
+            runInstructions = sqliteRunInstructions(databaseName);
         } else {
-            runInstructions = dockerRunInstructions(database);
+            runInstructions = dockerRunInstructions(database, databaseName);
         }
         String content = template
                 .replace("PROJECT_NAME", title.trim())
+                .replace("PROJECT_CLASS", mainClass)
                 .replace("DATABASE_LABEL", database.getLabel())
-                .replace("DATABASE_URL", database.getJdbcUrl())
+                .replace("DATABASE_URL", database.jdbcUrl(databaseName))
                 .replace("DATABASE_USERNAME", database.getUsername())
                 .replace("DATABASE_PASSWORD", database.getPassword())
                 .replace("DATABASE_RUN_INSTRUCTIONS", runInstructions)
-                .replace("API_SECTION", apiSection(apiType))
+                .replace("API_SECTION", apiSection(apiType) + "\n\n" + relationPayloadNote(database))
                 .replace("CACHE_SECTION", cacheSection(domain, cache))
                 .replace("API_RUN_INSTRUCTIONS", apiRunInstructions(apiType));
         fileUtils.writeFile(project + "/README.md", content);
@@ -673,6 +693,13 @@ public class DomainService {
                 + "- `save`, `edit` y `delete` invalidan o actualizan el cache.\n\n"
                 + "Levantá Redis con `docker compose up -d`. La conexión usa "
                 + "`REDIS_URL`, por defecto `redis://localhost:6379`.\n";
+    }
+
+    private String relationPayloadNote(DatabaseEnum database) {
+        if (database.isDocument()) {
+            return "En MongoDB las composiciones (`COMPOSITION` y `COMPOSITION_LIST`) se envían como objetos anidados.";
+        }
+        return "En SQL las relaciones se envían por ID: `<atributo>Id` para N:1/1:1 y `<atributo>Ids` para listas.";
     }
 
     private String apiSection(ApiEnum apiType) {
@@ -702,29 +729,29 @@ public class DomainService {
                 + "La documentación interactiva está en `http://localhost:8080/swagger-ui.html`.";
     }
 
-    private String h2RunInstructions() {
+    private String h2RunInstructions(String databaseName) {
         return "### H2 (embebida)\n\n"
-                + "La base se crea automáticamente en `./data/test`.\n\n"
+                + "La base se crea automáticamente en `./data/" + databaseName + "`.\n\n"
                 + "Consola H2: http://localhost:8080/h2-console\n\n"
-                + "- JDBC URL: `jdbc:h2:file:./data/test`\n"
+                + "- JDBC URL: `jdbc:h2:file:./data/" + databaseName + "`\n"
                 + "- Usuario: `sa`\n"
                 + "- Password: vacío";
     }
 
-    private String sqliteRunInstructions() {
+    private String sqliteRunInstructions(String databaseName) {
         return "### SQLite (archivo)\n\n"
-                + "La base se crea automáticamente en `./data/test.db`.\n\n"
+                + "La base se crea automáticamente en `./data/" + databaseName + ".db`.\n\n"
                 + "No necesita servidor ni Docker.\n\n"
                 + "La conexión usa `?foreign_keys=on` para que SQLite respete las foreign keys.";
     }
 
-    private String dockerRunInstructions(DatabaseEnum database) {
+    private String dockerRunInstructions(DatabaseEnum database, String databaseName) {
         return "### " + database.getLabel() + " con Docker\n\n"
                 + "Levantá la base con:\n\n"
                 + "```bash\n"
                 + "docker compose up -d\n"
                 + "```\n\n"
-                + "La aplicación se conecta por defecto a `" + database.getJdbcUrl() + "` "
+                + "La aplicación se conecta por defecto a `" + database.jdbcUrl(databaseName) + "` "
                 + "con usuario `" + database.getUsername() + "` y password `" + database.getPassword() + "`. "
                 + "Podés sobreescribir con `DB_URL`, `DB_USER` y `DB_PASSWORD`.";
     }
@@ -743,8 +770,10 @@ public class DomainService {
             return;
         }
         String template = fileUtils.getTemplateContent("/docker-compose-" + database.getKey() + ".yml.template");
+        String databaseName = StringUtils.toDatabaseName(title);
         String content = template
                 .replace("PROJECT_SLUG", slug)
+                .replace("DATABASE_NAME", databaseName)
                 .replace("REDIS_SERVICE", cache.isEnabled() ? redisService(slug) : "")
                 .replace("REDIS_VOLUME", cache.isEnabled() ? redisVolume() : "");
         fileUtils.writeFile(project + "/docker-compose.yml", content);
@@ -833,24 +862,75 @@ public class DomainService {
 
         String baseServiceFileContent = fileUtils.getTemplateContent(
                 templatePath(database, srcPath + "/service/ServiceBase.java"));
-        final String[] saveExternalEntities = {""};
-        final String[] externalEntitiesServices = {""};
         final String[] validations = {""};
-        final Set<String> externalServices = new HashSet<>();
+        final String[] relationRepositories = {""};
+        final String[] relationImports = {""};
+        final String[] attachRelations = {""};
+        final String[] arrayListImport = {""};
+        final Set<String> addedRepositories = new HashSet<>();
+        final boolean document = database.isDocument();
 
         entity.getAttributes().forEach((key, value) -> {
             String propertyName = isList(value.getType())
                     ? pluralize(StringUtils.capitalizeFirstCharacter(key))
                     : StringUtils.capitalizeFirstCharacter(key);
             String getter = entity.getEntityName() + ".get" + propertyName + "()";
+            String domain = entity.getEntityName();
 
-            if (value.getType() == TypeEnum.CUSTOM || value.getType() == TypeEnum.CUSTOM_ONE_TO_ONE) {
-                String customClass = StringUtils.capitalizeFirstCharacter(value.getCustomType());
-                String serviceVariable = StringUtils.lowerFirstCharacter(customClass) + "Service";
-                saveExternalEntities[0] += "\n\t\tif (" + getter + " != null) {\n\t\t\t"
-                        + serviceVariable + ".save(" + getter + ");\n\t\t}\n";
-                if (externalServices.add(serviceVariable)) {
-                    externalEntitiesServices[0] += "\n\tprivate final " + customClass + "Service " + serviceVariable + ";\n";
+            if (!document && isLink(value.getType())) {
+                String target = StringUtils.capitalizeFirstCharacter(value.getCustomType());
+                String repositoryVariable = StringUtils.lowerFirstCharacter(target) + "Repository";
+                String targetImport = importProjectBasePath + ".domain." + target + ";\n";
+                String repositoryImport = importProjectBasePath + ".repository." + target + "Repository;\n";
+
+                if (!relationImports[0].contains(targetImport)) {
+                    relationImports[0] += targetImport;
+                }
+                if (!relationImports[0].contains(repositoryImport)) {
+                    relationImports[0] += repositoryImport;
+                }
+                if (addedRepositories.add(repositoryVariable)) {
+                    relationRepositories[0] += "\tprivate final " + target + "Repository "
+                            + repositoryVariable + ";\n";
+                }
+
+                String setter = "set" + propertyName;
+                if (isList(value.getType())) {
+                    arrayListImport[0] = "import java.util.ArrayList;\n";
+                    String listVariable = StringUtils.lowerFirstCharacter(propertyName) + "Value";
+                    String attachedVariable = StringUtils.lowerFirstCharacter(propertyName) + "Attached";
+                    String itemVariable = StringUtils.lowerFirstCharacter(target) + "Value";
+
+                    attachRelations[0] += "\t\tList<" + target + "> " + listVariable
+                            + " = " + domain + ".get" + propertyName + "();\n";
+                    attachRelations[0] += "\t\tif (" + listVariable + " != null) {\n";
+                    attachRelations[0] += "\t\t\tList<" + target + "> " + attachedVariable
+                            + " = new ArrayList<>();\n";
+                    attachRelations[0] += "\t\t\tfor (" + target + " " + itemVariable
+                            + " : " + listVariable + ") {\n";
+                    attachRelations[0] += "\t\t\t\tif (" + itemVariable + ".getId() == null) {\n";
+                    attachRelations[0] += "\t\t\t\t\t" + attachedVariable + ".add(" + itemVariable + ");\n";
+                    attachRelations[0] += "\t\t\t\t} else {\n";
+                    attachRelations[0] += "\t\t\t\t\t" + attachedVariable + ".add("
+                            + repositoryVariable + ".findById(" + itemVariable + ".getId())\n";
+                    attachRelations[0] += "\t\t\t\t\t\t\t.orElseThrow(() -> new IllegalArgumentException(\""
+                            + target + " not found with id: \" + " + itemVariable + ".getId())));\n";
+                    attachRelations[0] += "\t\t\t\t}\n";
+                    attachRelations[0] += "\t\t\t}\n";
+                    attachRelations[0] += "\t\t\t" + domain + "." + setter + "(" + attachedVariable + ");\n";
+                    attachRelations[0] += "\t\t}\n\n";
+                } else {
+                    String relationVariable = StringUtils.lowerFirstCharacter(propertyName) + "Value";
+
+                    attachRelations[0] += "\t\t" + target + " " + relationVariable
+                            + " = " + domain + ".get" + propertyName + "();\n";
+                    attachRelations[0] += "\t\tif (" + relationVariable + " != null && "
+                            + relationVariable + ".getId() != null) {\n";
+                    attachRelations[0] += "\t\t\t" + domain + "." + setter + "("
+                            + repositoryVariable + ".findById(" + relationVariable + ".getId())\n";
+                    attachRelations[0] += "\t\t\t\t\t.orElseThrow(() -> new IllegalArgumentException(\""
+                            + target + " not found with id: \" + " + relationVariable + ".getId())));\n";
+                    attachRelations[0] += "\t\t}\n\n";
                 }
             }
 
@@ -898,8 +978,12 @@ public class DomainService {
         newServiceFileContent = newServiceFileContent.replace("REPOSITORY", entity.getEntityName() + "Repository");
         newServiceFileContent = newServiceFileContent.replace("DOMAIN_DECLARATION", StringUtils.capitalizeFirstCharacter(entity.getEntityName()));
         newServiceFileContent = newServiceFileContent.replace("DOMAIN", entity.getEntityName());
-        newServiceFileContent = newServiceFileContent.replace("SAVE_EXTERNAL_ENTITIES", saveExternalEntities[0]);
-        newServiceFileContent = newServiceFileContent.replace("EXTERNAL_ENTITIES_SERVICES", externalEntitiesServices[0]);
+        newServiceFileContent = newServiceFileContent.replace("SAVE_EXTERNAL_ENTITIES", "");
+        newServiceFileContent = newServiceFileContent.replace("EXTERNAL_ENTITIES_SERVICES", "");
+        newServiceFileContent = newServiceFileContent.replace("RELATION_IMPORTS", relationImports[0]);
+        newServiceFileContent = newServiceFileContent.replace("RELATION_REPOSITORIES", relationRepositories[0]);
+        newServiceFileContent = newServiceFileContent.replace("ARRAY_LIST_IMPORT", arrayListImport[0]);
+        newServiceFileContent = newServiceFileContent.replace("ATTACH_RELATIONS", attachRelations[0]);
         newServiceFileContent = newServiceFileContent.replace("VALIDATIONS", validations[0]);
         newServiceFileContent = newServiceFileContent.replace("CACHE_IMPORTS", cacheImports);
         newServiceFileContent = newServiceFileContent.replace("CACHE_FIND_ALL", cacheFindAll);
@@ -909,6 +993,100 @@ public class DomainService {
         newServiceFileContent = newServiceFileContent.replace("CACHE_DELETE", cacheDelete);
 
         fileUtils.writeFile(project + srcPath + "/service/" + StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + "Service.java", newServiceFileContent);
+    }
+
+    private void writeRequestFile(Entity entity, Path project) throws IOException {
+        String template = fileUtils.getTemplateContent(srcPath + "/dto/RequestBase.java");
+        String entityClass = StringUtils.capitalizeFirstCharacter(entity.getEntityName());
+        String[] imports = {""};
+        StringBuilder fields = new StringBuilder();
+
+        entity.getAttributes().forEach((key, value) -> {
+            if (isLink(value.getType())) {
+                if (isList(value.getType())) {
+                    fields.append("\tprivate List<Long> ").append(pluralize(key)).append("Ids;\n\n");
+                    imports[0] = addListImport(imports[0]);
+                } else {
+                    fields.append("\tprivate Long ").append(key).append("Id;\n\n");
+                }
+            } else {
+                imports[0] = addJavaTypeImport(imports[0], value.getType());
+                fields.append("\tprivate ").append(value.getType().javaType)
+                        .append(" ").append(key).append(";\n\n");
+            }
+        });
+
+        String content = template
+                .replace("ENTITY_CLASS", entityClass)
+                .replace("IMPORTS", imports[0])
+                .replace("FIELDS", fields.toString());
+
+        fileUtils.writeFile(project + srcPath + "/dto/" + entityClass + "Request.java", content);
+    }
+
+    private void writeMapperFile(Entity entity, Path project) throws IOException {
+        String template = fileUtils.getTemplateContent(srcPath + "/mapper/MapperBase.java");
+        String entityClass = StringUtils.capitalizeFirstCharacter(entity.getEntityName());
+        String[] imports = {""};
+        StringBuilder mapping = new StringBuilder("\t\tentity.setId(request.getId());\n");
+
+        entity.getAttributes().forEach((key, value) -> {
+            String property = StringUtils.capitalizeFirstCharacter(key);
+
+            if (isLink(value.getType())) {
+                String target = StringUtils.capitalizeFirstCharacter(value.getCustomType());
+                String targetImport = importProjectBasePath + ".domain." + target + ";\n";
+                if (!imports[0].contains(targetImport)) {
+                    imports[0] += targetImport;
+                }
+
+                if (isList(value.getType())) {
+                    imports[0] = addListImport(imports[0]);
+                    imports[0] = addArrayListImport(imports[0]);
+                    String pluralProperty = StringUtils.capitalizeFirstCharacter(pluralize(key));
+                    String listVariable = StringUtils.lowerFirstCharacter(pluralProperty) + "Ref";
+                    String itemVariable = StringUtils.lowerFirstCharacter(target) + "Ref";
+
+                    mapping.append("\n\t\tif (request.get").append(pluralProperty).append("Ids() != null) {\n");
+                    mapping.append("\t\t\tList<").append(target).append("> ").append(listVariable)
+                            .append(" = new ArrayList<>();\n");
+                    mapping.append("\t\t\tfor (Long id : request.get").append(pluralProperty)
+                            .append("Ids()) {\n");
+                    mapping.append("\t\t\t\tif (id != null) {\n");
+                    mapping.append("\t\t\t\t\t").append(target).append(" ").append(itemVariable)
+                            .append(" = new ").append(target).append("();\n");
+                    mapping.append("\t\t\t\t\t").append(itemVariable).append(".setId(id);\n");
+                    mapping.append("\t\t\t\t\t").append(listVariable).append(".add(")
+                            .append(itemVariable).append(");\n");
+                    mapping.append("\t\t\t\t}\n");
+                    mapping.append("\t\t\t}\n");
+                    mapping.append("\t\t\tentity.set").append(pluralProperty).append("(")
+                            .append(listVariable).append(");\n");
+                    mapping.append("\t\t}\n");
+                } else {
+                    String relationVariable = StringUtils.lowerFirstCharacter(property) + "Ref";
+
+                    mapping.append("\n\t\tif (request.get").append(property).append("Id() != null) {\n");
+                    mapping.append("\t\t\t").append(target).append(" ").append(relationVariable)
+                            .append(" = new ").append(target).append("();\n");
+                    mapping.append("\t\t\t").append(relationVariable).append(".setId(request.get")
+                            .append(property).append("Id());\n");
+                    mapping.append("\t\t\tentity.set").append(property).append("(")
+                            .append(relationVariable).append(");\n");
+                    mapping.append("\t\t}\n");
+                }
+            } else {
+                mapping.append("\t\tentity.set").append(property).append("(request.get")
+                        .append(property).append("());\n");
+            }
+        });
+
+        String content = template
+                .replace("ENTITY_CLASS", entityClass)
+                .replace("IMPORTS", imports[0])
+                .replace("MAPPING", mapping.toString());
+
+        fileUtils.writeFile(project + srcPath + "/mapper/" + entityClass + "Mapper.java", content);
     }
 
     private void writeRepositoryFile(Entity entity, DatabaseEnum database, Path project) throws IOException {
@@ -933,17 +1111,36 @@ public class DomainService {
         String baseControllerFileContent = fileUtils.getTemplateContent(
                 templatePath(database, srcPath + "/controller/ControllerBase.java"));
 
-        String imports = importProjectBasePath + ".domain." + StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + ";\n";
-        imports += importProjectBasePath + ".service." + StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + "Service;\n";
+        String entityClass = StringUtils.capitalizeFirstCharacter(entity.getEntityName());
+        String imports = importProjectBasePath + ".domain." + entityClass + ";\n";
+        imports += importProjectBasePath + ".service." + entityClass + "Service;\n";
 
-        String newControllerFileContent = baseControllerFileContent.replace("ENTITY_DECLARATION", StringUtils.capitalizeFirstCharacter(entity.getEntityName()));
-        newControllerFileContent = newControllerFileContent.replace("ENTITY", entity.getEntityName());
+        String requestType = entityClass;
+        String saveBody;
+        String editBody;
+
+        if (database.isDocument()) {
+            saveBody = "return ResponseEntity.ok(SERVICE.save(request));";
+            editBody = "return ResponseEntity.ok(SERVICE.edit(request));";
+        } else {
+            imports += importProjectBasePath + ".dto." + entityClass + "Request;\n";
+            imports += importProjectBasePath + ".mapper." + entityClass + "Mapper;\n";
+            requestType = entityClass + "Request";
+            saveBody = "request.setId(null);\n        return ResponseEntity.ok(SERVICE.save("
+                    + entityClass + "Mapper.toEntity(request)));";
+            editBody = "return ResponseEntity.ok(SERVICE.edit(" + entityClass + "Mapper.toEntity(request)));";
+        }
+
+        String newControllerFileContent = baseControllerFileContent.replace("ENTITY_DECLARATION", entityClass);
         newControllerFileContent = newControllerFileContent.replace("IMPORTS", imports);
-        newControllerFileContent = newControllerFileContent.replace("SERVICE_DECLARATION", StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + "Service " + entity.getEntityName() + "Service;\n");
+        newControllerFileContent = newControllerFileContent.replace("REQUEST_TYPE", requestType);
+        newControllerFileContent = newControllerFileContent.replace("SAVE_BODY", saveBody);
+        newControllerFileContent = newControllerFileContent.replace("EDIT_BODY", editBody);
+        newControllerFileContent = newControllerFileContent.replace("SERVICE_DECLARATION", entityClass + "Service " + entity.getEntityName() + "Service;\n");
         newControllerFileContent = newControllerFileContent.replace("SERVICE", entity.getEntityName() + "Service");
         newControllerFileContent = newControllerFileContent.replace("REQUEST_MAPPING", "/api/" + entity.getEntityName());
 
-        fileUtils.writeFile(project + srcPath + "/controller/" + StringUtils.capitalizeFirstCharacter(entity.getEntityName()) + "Controller.java", newControllerFileContent);
+        fileUtils.writeFile(project + srcPath + "/controller/" + entityClass + "Controller.java", newControllerFileContent);
     }
 
     private void writeGraphQlControllerFile(Entity entity, DatabaseEnum database, Path project) throws IOException {
@@ -958,18 +1155,37 @@ public class DomainService {
         String imports = importProjectBasePath + ".domain." + entityClassName + ";\n";
         imports += importProjectBasePath + ".service." + entityClassName + "Service;\n";
 
+        String inputType = entityClassName;
+        String createBody;
+        String updateBody;
         String idExpression = database.isDocument() ? "id" : "Long.valueOf(id)";
+        String serviceVariable = entity.getEntityName() + "Service";
+
+        if (database.isDocument()) {
+            createBody = "input.setId(null);\n        return " + serviceVariable + ".save(input);";
+            updateBody = "return " + serviceVariable + ".edit(input);";
+        } else {
+            imports += importProjectBasePath + ".dto." + entityClassName + "Request;\n";
+            imports += importProjectBasePath + ".mapper." + entityClassName + "Mapper;\n";
+            inputType = entityClassName + "Request";
+            createBody = "input.setId(null);\n        return " + serviceVariable + ".save("
+                    + entityClassName + "Mapper.toEntity(input));";
+            updateBody = "return " + serviceVariable + ".edit(" + entityClassName + "Mapper.toEntity(input));";
+        }
 
         String newControllerFileContent = baseControllerFileContent.replace("ENTITY_DECLARATION", entityClassName);
         newControllerFileContent = newControllerFileContent.replace("ENTITY", entity.getEntityName());
         newControllerFileContent = newControllerFileContent.replace("IMPORTS", imports);
+        newControllerFileContent = newControllerFileContent.replace("INPUT_TYPE", inputType);
+        newControllerFileContent = newControllerFileContent.replace("CREATE_BODY", createBody);
+        newControllerFileContent = newControllerFileContent.replace("UPDATE_BODY", updateBody);
         newControllerFileContent = newControllerFileContent.replace("ID_EXPRESSION", idExpression);
 
         fileUtils.writeFile(project + srcPath + "/controller/" + entityClassName + "GraphQLController.java",
                 newControllerFileContent);
     }
 
-    private void writeGraphQlSchema(Domain domain, Path project) throws IOException {
+    private void writeGraphQlSchema(Domain domain, DatabaseEnum database, Path project) throws IOException {
         StringBuilder schema = new StringBuilder();
         schema.append("# Esquema GraphQL generado por Spring CRUD Initializr\n\n");
         schema.append("scalar Date\n");
@@ -980,7 +1196,7 @@ public class DomainService {
 
         for (Entity entity : domain.getEntities()) {
             schema.append(renderGraphQlType(entity)).append("\n");
-            schema.append(renderGraphQlInput(entity)).append("\n");
+            schema.append(renderGraphQlInput(entity, database)).append("\n");
         }
 
         schema.append("type Query {\n");
@@ -1029,7 +1245,7 @@ public class DomainService {
         return type.append("}\n").toString();
     }
 
-    private String renderGraphQlInput(Entity entity) {
+    private String renderGraphQlInput(Entity entity, DatabaseEnum database) {
         String entityClassName = StringUtils.capitalizeFirstCharacter(entity.getEntityName());
         StringBuilder input = new StringBuilder("input ").append(entityClassName).append("Input {\n");
         if (!entity.isEmbedded()) {
@@ -1038,6 +1254,16 @@ public class DomainService {
         for (Map.Entry<String, Attribute> entry : entity.getAttributes().entrySet()) {
             Attribute attribute = entry.getValue();
             String fieldName = graphQlFieldName(entry.getKey(), attribute.getType());
+
+            if (!database.isDocument() && isLink(attribute.getType())) {
+                String relationField = isList(attribute.getType())
+                        ? fieldName + "Ids"
+                        : fieldName + "Id";
+                input.append("  ").append(relationField).append(": ")
+                        .append(isList(attribute.getType()) ? "[ID]" : "ID").append("\n");
+                continue;
+            }
+
             input.append("  ").append(fieldName).append(": ")
                     .append(graphQlType(attribute, true)).append("\n");
         }
@@ -1397,6 +1623,13 @@ public class DomainService {
         return imports + "import java.util.List;\n";
     }
 
+    private String addArrayListImport(String imports) {
+        if (imports.contains("import java.util.ArrayList;")) {
+            return imports;
+        }
+        return imports + "import java.util.ArrayList;\n";
+    }
+
     private String addJavaTypeImport(String imports, TypeEnum type) {
         String importLine = switch (type) {
             case DATE -> "import java.time.LocalDate;\n";
@@ -1553,14 +1786,11 @@ public class DomainService {
         return current == null || current.compareTo(candidate) > 0 ? candidate : current;
     }
 
-    private void writeBuilderFile(Entity entity, Path project) throws IOException {
-        if (entity.isEmbedded()) {
-            return;
-        }
-
+    private void writeBuilderFile(Entity entity, Domain domain, Path project) throws IOException {
         String builderFile = fileUtils.getTemplateContent(testPath + "/builder/BuilderBase.java");
         String[] genericMethods = {""};
         String[] genericBuild = {""};
+        String[] relationBuild = {""};
         String domainEntity = StringUtils.capitalizeFirstCharacter(entity.getEntityName());
         String[] importString = {importProjectBasePath + ".domain." + domainEntity + ";\n"};
 
@@ -1576,23 +1806,104 @@ public class DomainService {
                     importString[0] += customImport;
                 }
                 type = isList(typeEnum) ? "List<" + customType + ">" : customType;
+                String relatedBuilder = customType + "Builder";
+                String backReferences = backReferenceCalls(domain, entity, customType);
+                String relatedValue = relatedBuilder + ".generic(depth - 1)" + backReferences + ".build()";
                 if (isList(typeEnum)) {
+                    relatedValue = "new ArrayList<>(List.of(" + relatedValue + "))";
                     importString[0] = addListImport(importString[0]);
+                    importString[0] = addArrayListImport(importString[0]);
+                } else if (backReferences.contains("ArrayList")) {
+                    importString[0] = addListImport(importString[0]);
+                    importString[0] = addArrayListImport(importString[0]);
                 }
+                relationBuild[0] += "builder.with" + propertyName + "(" + relatedValue + ");\n\t\t";
             } else {
                 importString[0] = addJavaTypeImport(importString[0], typeEnum);
+                genericBuild[0] += "builder.with" + propertyName + "(" + defaultValue(value) + ");\n\t";
             }
             genericMethods[0] += "public " + domainEntity + "Builder with" + propertyName + "(" + type + " val) {\n\t";
             genericMethods[0] += "instance.set" + propertyName + "(val);\n\treturn this;\n}\n\n";
-            genericBuild[0] += "builder.with" + propertyName + "(" + defaultValue(value) + ");\n\t";
         });
 
+        if (!relationBuild[0].isEmpty()) {
+            genericBuild[0] += "if (depth > 0) {\n\t\t" + relationBuild[0] + "}\n\t";
+        }
+
+        int depth = longestSingleRelationChain(domain, entity) + 1;
         String newBuilderFile = builderFile.replace("DOMAIN", domainEntity);
+        newBuilderFile = newBuilderFile.replace("GENERIC_DEPTH", String.valueOf(depth));
         newBuilderFile = newBuilderFile.replace("IMPORT", importString[0]);
         newBuilderFile = newBuilderFile.replace("GENERIC_BUILD", genericBuild[0]);
         newBuilderFile = newBuilderFile.replace("GENERIC_METHODS", genericMethods[0]);
 
         fileUtils.writeFile(project + testPath + "/builder/" + domainEntity + "Builder.java", newBuilderFile);
+    }
+
+    private String backReferenceCalls(Domain domain, Entity entity, String targetName) {
+        Entity target = domain.getEntities().stream()
+                .filter(candidate -> candidate.getEntityName().equalsIgnoreCase(targetName))
+                .findFirst()
+                .orElse(null);
+
+        if (target == null) {
+            return "";
+        }
+
+        StringBuilder calls = new StringBuilder();
+        target.getAttributes().forEach((key, attribute) -> {
+            if (!isLink(attribute.getType())
+                    || attribute.getCustomType() == null
+                    || !attribute.getCustomType().equalsIgnoreCase(entity.getEntityName())) {
+                return;
+            }
+
+            String propertyName = isList(attribute.getType())
+                    ? pluralize(StringUtils.capitalizeFirstCharacter(key))
+                    : StringUtils.capitalizeFirstCharacter(key);
+
+            if (isList(attribute.getType())) {
+                calls.append(".with").append(propertyName)
+                        .append("(new ArrayList<>(List.of(builder.instance)))");
+            } else {
+                calls.append(".with").append(propertyName).append("(builder.instance)");
+            }
+        });
+
+        return calls.toString();
+    }
+
+    private int longestSingleRelationChain(Domain domain, Entity entity) {
+        return longestSingleRelationChain(domain, entity, new HashSet<>());
+    }
+
+    private int longestSingleRelationChain(Domain domain, Entity entity, Set<String> visiting) {
+        String entityKey = entity.getEntityName().toLowerCase();
+        if (!visiting.add(entityKey)) {
+            return 0;
+        }
+
+        int longest = 0;
+        for (Map.Entry<String, Attribute> entry : entity.getAttributes().entrySet()) {
+            Attribute attribute = entry.getValue();
+            if (attribute.getType() != TypeEnum.CUSTOM
+                    && attribute.getType() != TypeEnum.CUSTOM_ONE_TO_ONE) {
+                continue;
+            }
+
+            Entity target = domain.getEntities().stream()
+                    .filter(candidate -> candidate.getEntityName()
+                            .equalsIgnoreCase(attribute.getCustomType()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (target != null) {
+                longest = Math.max(longest, 1 + longestSingleRelationChain(domain, target, visiting));
+            }
+        }
+
+        visiting.remove(entityKey);
+        return longest;
     }
 
     private void writeTestFile(Entity entity, DatabaseEnum database, Path project) throws IOException {

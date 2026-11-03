@@ -45,12 +45,35 @@ class DomainServiceTest {
 
         assertTrue(Files.exists(project.resolve("pom.xml")));
         assertTrue(Files.exists(project.resolve(".gitignore")));
-        assertTrue(Files.exists(project.resolve("src/main/java/com/example/projectBase/ProjectBaseApplication.java")));
+        assertTrue(Files.exists(project.resolve("src/main/java/com/example/projectBase/MiProyectoApplication.java")));
         assertTrue(Files.exists(project.resolve("src/main/java/com/example/projectBase/domain/Persona.java")));
         assertTrue(Files.exists(project.resolve("src/main/java/com/example/projectBase/domain/Pedido.java")));
         assertTrue(Files.exists(project.resolve("src/test/java/com/example/projectBase/tests/service/PersonaServiceTest.java")));
+        String mainClass = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/MiProyectoApplication.java"));
+        assertTrue(mainClass.contains("public class MiProyectoApplication"));
+        assertTrue(mainClass.contains("SpringApplication.run(MiProyectoApplication.class, args)"));
+        assertFalse(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/ProjectBaseApplication.java")));
         assertFalse(Files.exists(project.resolve("src/main/java/com/example/projectBase/domain/DomainBase.java")));
         assertFalse(Files.exists(project.resolve("src/main/java/com/example/projectBase/service/ServiceBase.java")));
+    }
+
+    @Test
+    void processDomain_withNumericTitle_generatesSafeMainClassAndDatabaseName() throws IOException {
+        Domain domain = validDomain();
+        domain.setTitle("123 Tienda Online");
+
+        Path project = track(domainService.processDomain(domain));
+
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/Project123TiendaOnlineApplication.java")));
+        String properties = Files.readString(
+                project.resolve("src/main/resources/application.properties"));
+        assertTrue(properties.contains(
+                "${DB_URL:jdbc:postgresql://localhost:5432/db_123_tienda_online}"));
+        String compose = Files.readString(project.resolve("docker-compose.yml"));
+        assertTrue(compose.contains("POSTGRES_DB: db_123_tienda_online"));
     }
 
     @Test
@@ -143,8 +166,39 @@ class DomainServiceTest {
         Path project = track(domainService.processDomain(validDomain()));
         String service = Files.readString(project.resolve("src/main/java/com/example/projectBase/service/PedidoService.java"));
 
-        assertTrue(service.contains("if (pedido.getCliente() != null) {"));
-        assertTrue(service.contains("personaService.save(pedido.getCliente());"));
+        assertTrue(service.contains("Persona clienteValue = pedido.getCliente();"));
+        assertTrue(service.contains("if (clienteValue != null && clienteValue.getId() != null) {"));
+        assertTrue(service.contains("pedido.setCliente(personaRepository.findById(clienteValue.getId())"));
+    }
+
+    @Test
+    void processDomain_withRelations_generatesRequestDtoMapperAndRelationAttach() throws IOException {
+        Path project = track(domainService.processDomain(validDomain()));
+
+        String request = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/dto/PedidoRequest.java"));
+        assertTrue(request.contains("private Long clienteId;"));
+        assertTrue(request.contains("private List<Long> itemsIds;"));
+
+        String mapper = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/mapper/PedidoMapper.java"));
+        assertTrue(mapper.contains("if (request.getClienteId() != null)"));
+        assertTrue(mapper.contains("clienteRef.setId(request.getClienteId());"));
+        assertTrue(mapper.contains("if (request.getItemsIds() != null)"));
+        assertTrue(mapper.contains("entity.setItems(itemsRef);"));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PedidoService.java"));
+        assertTrue(service.contains("@Transactional"));
+        assertTrue(service.contains("attachRelations(pedido);"));
+        assertTrue(service.contains("private final PersonaRepository personaRepository;"));
+        assertTrue(service.contains("pedido.setCliente(personaRepository.findById(clienteValue.getId())"));
+        assertFalse(service.contains("personaService.save"));
+
+        String controller = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PedidoController.java"));
+        assertTrue(controller.contains("@RequestBody PedidoRequest request"));
+        assertTrue(controller.contains("PedidoMapper.toEntity(request)"));
     }
 
     @Test
@@ -166,11 +220,12 @@ class DomainServiceTest {
         Path project = track(domainService.processDomain(domain));
         String service = Files.readString(project.resolve("src/main/java/com/example/projectBase/service/PedidoService.java"));
 
-        int firstOccurrence = service.indexOf("private final PersonaService personaService;");
-        int lastOccurrence = service.lastIndexOf("private final PersonaService personaService;");
+        int firstOccurrence = service.indexOf("private final PersonaRepository personaRepository;");
+        int lastOccurrence = service.lastIndexOf("private final PersonaRepository personaRepository;");
         assertTrue(firstOccurrence >= 0);
         assertEquals(firstOccurrence, lastOccurrence);
-        assertTrue(service.contains("personaService.save(pedido.getVendedor());"));
+        assertTrue(service.contains("pedido.setCliente(personaRepository.findById(clienteValue.getId())"));
+        assertTrue(service.contains("pedido.setVendedor(personaRepository.findById(vendedorValue.getId())"));
     }
 
     @Test
@@ -202,6 +257,31 @@ class DomainServiceTest {
         String service = Files.readString(project.resolve("src/main/java/com/example/projectBase/service/PersonaService.java"));
         assertTrue(service.contains("if (!personaRepository.existsById(id))"));
         assertFalse(service.contains("EmptyResultDataAccessException"));
+    }
+
+    @Test
+    void processDomain_withRelations_generatesBuildersWithRelatedInstances() throws IOException {
+        Domain domain = validDomain();
+
+        Path project = track(domainService.processDomain(domain));
+
+        String builder = Files.readString(project.resolve(
+                "src/test/java/com/example/projectBase/builder/PedidoBuilder.java"));
+        assertTrue(builder.contains("public static PedidoBuilder generic()"));
+        assertTrue(builder.contains("static PedidoBuilder generic(int depth)"));
+        assertTrue(builder.contains("if (depth > 0) {"));
+        assertTrue(builder.contains("builder.withCliente(PersonaBuilder.generic(depth - 1).build());"));
+        assertTrue(builder.contains(
+                "builder.withItems(new ArrayList<>(List.of(PersonaBuilder.generic(depth - 1).build())));"));
+        assertTrue(builder.contains("import java.util.ArrayList;"));
+        assertTrue(builder.contains("import java.util.List;"));
+        assertFalse(builder.contains("withCliente(null)"));
+        assertFalse(builder.contains("withItems(null)"));
+
+        String personaBuilder = Files.readString(project.resolve(
+                "src/test/java/com/example/projectBase/builder/PersonaBuilder.java"));
+        assertTrue(personaBuilder.contains("static PersonaBuilder generic(int depth)"));
+        assertFalse(personaBuilder.contains("if (depth > 0) {"));
     }
 
     @Test
@@ -560,7 +640,7 @@ class DomainServiceTest {
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("# Base de datos: PostgreSQL"));
-        assertTrue(properties.contains("${DB_URL:jdbc:postgresql://localhost:5432/test}"));
+        assertTrue(properties.contains("${DB_URL:jdbc:postgresql://localhost:5432/mi_proyecto}"));
         assertFalse(properties.contains("spring.h2.console.enabled"));
 
         String testProperties = Files.readString(project.resolve("src/test/resources/application.properties"));
@@ -588,7 +668,7 @@ class DomainServiceTest {
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("# Base de datos: MariaDB"));
-        assertTrue(properties.contains("${DB_URL:jdbc:mariadb://localhost:3306/test}"));
+        assertTrue(properties.contains("${DB_URL:jdbc:mariadb://localhost:3306/mi_proyecto}"));
 
         String schema = Files.readString(project.resolve("doc/scripts/schema.sql"));
         assertTrue(schema.contains("CREATE TABLE IF NOT EXISTS `pedido`("));
@@ -613,7 +693,7 @@ class DomainServiceTest {
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("# Base de datos: PostgreSQL"));
-        assertTrue(properties.contains("${DB_URL:jdbc:postgresql://localhost:5432/test}"));
+        assertTrue(properties.contains("${DB_URL:jdbc:postgresql://localhost:5432/mi_proyecto}"));
 
         String schema = Files.readString(project.resolve("doc/scripts/schema.sql"));
         assertTrue(schema.contains("CREATE TABLE IF NOT EXISTS \"pedido\"("));
@@ -627,7 +707,7 @@ class DomainServiceTest {
 
         String compose = Files.readString(project.resolve("docker-compose.yml"));
         assertTrue(compose.contains("image: postgres:17"));
-        assertTrue(compose.contains("POSTGRES_DB: test"));
+        assertTrue(compose.contains("POSTGRES_DB: mi_proyecto"));
 
         String readme = Files.readString(project.resolve("README.md"));
         assertTrue(readme.contains("**PostgreSQL**"));
@@ -649,7 +729,7 @@ class DomainServiceTest {
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("# Base de datos: H2"));
-        assertTrue(properties.contains("${DB_URL:jdbc:h2:file:./data/test;DB_CLOSE_ON_EXIT=FALSE}"));
+        assertTrue(properties.contains("${DB_URL:jdbc:h2:file:./data/mi_proyecto;DB_CLOSE_ON_EXIT=FALSE}"));
         assertTrue(properties.contains("${DB_USER:sa}"));
         assertTrue(properties.contains("spring.h2.console.enabled=true"));
 
@@ -683,7 +763,7 @@ class DomainServiceTest {
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("# Base de datos: SQLite"));
-        assertTrue(properties.contains("${DB_URL:jdbc:sqlite:./data/test.db?foreign_keys=on}"));
+        assertTrue(properties.contains("${DB_URL:jdbc:sqlite:./data/mi_proyecto.db?foreign_keys=on}"));
         assertTrue(properties.contains("spring.datasource.driver-class-name=org.sqlite.JDBC"));
         assertTrue(properties.contains("spring.jpa.database-platform=org.hibernate.community.dialect.SQLiteDialect"));
         assertFalse(properties.contains("spring.h2.console.enabled"));
@@ -733,7 +813,7 @@ class DomainServiceTest {
         assertFalse(pom.contains("TEST_SUPPORT_DEPENDENCY"));
 
         String application = Files.readString(project.resolve(
-                "src/main/java/com/example/projectBase/ProjectBaseApplication.java"));
+                "src/main/java/com/example/projectBase/MiProyectoApplication.java"));
         assertTrue(application.contains("@EnableMongoAuditing"));
 
         String persona = Files.readString(project.resolve(
@@ -768,7 +848,7 @@ class DomainServiceTest {
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("# Base de datos: MongoDB"));
-        assertTrue(properties.contains("${MONGODB_URI:mongodb://localhost:27017/test}"));
+        assertTrue(properties.contains("${MONGODB_URI:mongodb://localhost:27017/mi_proyecto}"));
         assertTrue(properties.contains("spring.data.mongodb.auto-index-creation=true"));
         assertTrue(properties.contains("springdoc.swagger-ui.path=/swagger-ui.html"));
         assertFalse(properties.contains("spring.jpa"));
@@ -793,7 +873,7 @@ class DomainServiceTest {
 
         String compose = Files.readString(project.resolve("docker-compose.yml"));
         assertTrue(compose.contains("image: mongo:7"));
-        assertTrue(compose.contains("MONGO_INITDB_DATABASE: test"));
+        assertTrue(compose.contains("MONGO_INITDB_DATABASE: mi_proyecto"));
 
         String readme = Files.readString(project.resolve("README.md"));
         assertTrue(readme.contains("**MongoDB**"));
@@ -849,7 +929,8 @@ class DomainServiceTest {
 
         String service = Files.readString(project.resolve(
                 "src/main/java/com/example/projectBase/service/PersonaService.java"));
-        assertTrue(service.contains("direccionService.save(persona.getDireccion())"));
+        assertTrue(service.contains("Direccion direccionValue = persona.getDireccion();"));
+        assertTrue(service.contains("persona.setDireccion(direccionRepository.findById(direccionValue.getId())"));
     }
 
     @Test
@@ -937,13 +1018,24 @@ class DomainServiceTest {
                 "src/main/java/com/example/projectBase/controller/DireccionController.java")));
         assertFalse(Files.exists(project.resolve(
                 "src/test/java/com/example/projectBase/tests/service/DireccionServiceTest.java")));
-        assertFalse(Files.exists(project.resolve(
+        assertTrue(Files.exists(project.resolve(
                 "src/test/java/com/example/projectBase/builder/DireccionBuilder.java")));
+
+        String direccionBuilder = Files.readString(project.resolve(
+                "src/test/java/com/example/projectBase/builder/DireccionBuilder.java"));
+        assertTrue(direccionBuilder.contains("static DireccionBuilder generic(int depth)"));
+        assertTrue(direccionBuilder.contains("builder.withCalle(\"test\");"));
 
         String builder = Files.readString(project.resolve(
                 "src/test/java/com/example/projectBase/builder/PedidoBuilder.java"));
         assertTrue(builder.contains("withDireccion(Direccion val)"));
         assertTrue(builder.contains("withItems(List<Item> val)"));
+        assertTrue(builder.contains("if (depth > 0) {"));
+        assertTrue(builder.contains("builder.withDireccion(DireccionBuilder.generic(depth - 1).build());"));
+        assertTrue(builder.contains(
+                "builder.withItems(new ArrayList<>(List.of(ItemBuilder.generic(depth - 1).build())));"));
+        assertFalse(builder.contains("withDireccion(null)"));
+        assertFalse(builder.contains("withItems(null)"));
 
         String readme = Files.readString(project.resolve("README.md"));
         assertTrue(readme.contains("documentos embebidos"));
@@ -1038,6 +1130,14 @@ class DomainServiceTest {
         assertTrue(personaController.contains("@Tag(name = \"Persona\""));
         assertTrue(personaController.contains("@Operation(summary = \"Listar todas las entidades Persona\")"));
         assertTrue(personaController.contains("@Parameter(description = \"ID de Persona\")"));
+        assertTrue(personaController.contains("@RequestBody PersonaRequest request"));
+        assertTrue(personaController.contains("PersonaMapper.toEntity(request)"));
+
+        String personaRequest = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/dto/PersonaRequest.java"));
+        assertTrue(personaRequest.contains("private String nombre;"));
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/mapper/PersonaMapper.java")));
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertFalse(properties.contains("spring.graphql"));
@@ -1217,8 +1317,9 @@ class DomainServiceTest {
         assertTrue(personaController.contains("findAllPersona()"));
         assertTrue(personaController.contains("findPersonaById(@Argument(\"id\") String id)"));
         assertTrue(personaController.contains("@MutationMapping"));
-        assertTrue(personaController.contains("createPersona(@Argument(\"input\") Persona persona)"));
-        assertTrue(personaController.contains("persona.setId(null);"));
+        assertTrue(personaController.contains("createPersona(@Argument(\"input\") PersonaRequest input)"));
+        assertTrue(personaController.contains("input.setId(null);"));
+        assertTrue(personaController.contains("personaService.save(PersonaMapper.toEntity(input))"));
         assertTrue(personaController.contains("personaService.findById(Long.valueOf(id))"));
         assertFalse(personaController.contains("@SchemaMapping"));
 
@@ -1253,8 +1354,8 @@ class DomainServiceTest {
         assertTrue(schema.contains("cliente: Persona"));
         assertTrue(schema.contains("items: [Persona]"));
         assertTrue(schema.contains("input PedidoInput {"));
-        assertTrue(schema.contains("cliente: PersonaInput"));
-        assertTrue(schema.contains("items: [PersonaInput]"));
+        assertTrue(schema.contains("clienteId: ID"));
+        assertTrue(schema.contains("itemsIds: [ID]"));
         assertTrue(schema.contains("findAllPersona: [Persona!]!"));
         assertTrue(schema.contains("findPersonaById(id: ID!): Persona"));
         assertTrue(schema.contains("createPedido(input: PedidoInput!): Pedido!"));

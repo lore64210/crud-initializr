@@ -25,14 +25,13 @@ public class ENTITY_DECLARATIONGraphQLController {
     }
 
     @MutationMapping
-    public ENTITY_DECLARATION createENTITY_DECLARATION(@Argument("input") ENTITY_DECLARATION ENTITY) {
-        ENTITY.setId(null);
-        return ENTITYService.save(ENTITY);
+    public ENTITY_DECLARATION createENTITY_DECLARATION(@Argument("input") INPUT_TYPE input) {
+        CREATE_BODY
     }
 
     @MutationMapping
-    public ENTITY_DECLARATION updateENTITY_DECLARATION(@Argument("input") ENTITY_DECLARATION ENTITY) {
-        return ENTITYService.edit(ENTITY);
+    public ENTITY_DECLARATION updateENTITY_DECLARATION(@Argument("input") INPUT_TYPE input) {
+        UPDATE_BODY
     }
 
     @MutationMapping

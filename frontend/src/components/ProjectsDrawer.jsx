@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Button,
   Chip,
@@ -15,7 +15,9 @@ import AddIcon from "@mui/icons-material/Add";
 import CachedIcon from "@mui/icons-material/Cached";
 import CloseIcon from "@mui/icons-material/Close";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import DownloadIcon from "@mui/icons-material/Download";
 import FolderOpenIcon from "@mui/icons-material/FolderOpen";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
 import "../css/app.css";
 
 const DATABASE_LABELS = {
@@ -48,14 +50,33 @@ const ProjectsDrawer = ({
   onOpenProject,
   onDeleteProject,
   onNewProject,
+  onImport,
+  onExport,
 }) => {
   const [pendingDelete, setPendingDelete] = useState(null);
+  const fileInputRef = useRef(null);
 
   const confirmDelete = () => {
     if (pendingDelete) {
       onDeleteProject(pendingDelete.id);
     }
     setPendingDelete(null);
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) {
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      onImport?.(text);
+    } catch {
+      onImport?.("");
+    }
   };
 
   return (
@@ -207,8 +228,34 @@ const ProjectsDrawer = ({
             >
               Nuevo proyecto
             </Button>
+            <div className="projects-drawer__actions">
+              <Button
+                className="projects-drawer__action"
+                startIcon={<UploadFileIcon />}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                Importar
+              </Button>
+              <Button
+                className="projects-drawer__action"
+                startIcon={<DownloadIcon />}
+                onClick={onExport}
+                disabled={projects.length === 0}
+              >
+                Exportar
+              </Button>
+            </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              aria-label="Importar proyectos desde un archivo JSON"
+              className="projects-drawer__file-input"
+              onChange={handleFileChange}
+            />
             <span className="projects-drawer__footer-note">
-              Los proyectos quedan guardados solo en este navegador.
+              Los proyectos quedan guardados solo en este navegador. Usá
+              Importar/Exportar para moverlos entre navegadores.
             </span>
           </div>
         </div>

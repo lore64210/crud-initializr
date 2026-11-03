@@ -34,6 +34,44 @@ public final class StringUtils {
         return artifactId.isEmpty() ? "project-base" : artifactId;
     }
 
+    public static String toClassName(String value) {
+        String artifactId = toArtifactId(value);
+        StringBuilder className = new StringBuilder();
+
+        for (String part : artifactId.split("[^a-z0-9]+")) {
+            if (!part.isEmpty()) {
+                className.append(capitalizeFirstCharacter(part));
+            }
+        }
+
+        if (className.isEmpty()) {
+            return "ProjectBase";
+        }
+
+        if (!Character.isJavaIdentifierStart(className.charAt(0))) {
+            className.insert(0, "Project");
+        }
+
+        return className.toString();
+    }
+
+    public static String toDatabaseName(String value) {
+        String databaseName = toArtifactId(value)
+                .replaceAll("[^a-z0-9]+", "_")
+                .replaceAll("_{2,}", "_")
+                .replaceAll("^_+|_+$", "");
+
+        if (databaseName.isEmpty()) {
+            return "project_base";
+        }
+
+        if (!databaseName.matches("^[a-z_].*")) {
+            return "db_" + databaseName;
+        }
+
+        return databaseName;
+    }
+
     public static String escapeXml(String value) {
         if (value == null) {
             return "";

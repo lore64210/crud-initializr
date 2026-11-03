@@ -10,6 +10,8 @@ import { RelationshipGraphPanel } from "../components/RelationshipGraph";
 import service, { formatStringToCamelCase } from "../service/service";
 import {
   deleteProject,
+  exportProjectsToFile,
+  importProjectsFromText,
   listProjects,
   saveProject,
 } from "../service/projectStorage";
@@ -81,9 +83,6 @@ const createEmptyEntity = () => ({
   embedded: false,
   cacheEnabled: true,
 });
-
-const warningMessage =
-  "WARNING: Segun las validaciones que se usen en los atributos de tipo relación o composición, los test pueden fallar. Revisar los builders que se usan al crear instancias genericas y reemplazar por lo que haga falta";
 
 const validateForm = (businessName, entities, database, cache) => {
   const title = businessName.trim();
@@ -658,6 +657,35 @@ function HomePage() {
     }
   };
 
+  const handleExportProjects = () => {
+    if (savedProjects.length === 0) {
+      return;
+    }
+
+    try {
+      exportProjectsToFile();
+      setSaveFeedback("Proyectos exportados");
+    } catch {
+      setErrorMessage("No se pudieron exportar los proyectos");
+    }
+  };
+
+  const handleImportProjects = (text) => {
+    try {
+      const { projects, imported } = importProjectsFromText(text);
+      setSavedProjects(projects);
+      setSaveFeedback(
+        imported === 1
+          ? "Se importó 1 proyecto"
+          : `Se importaron ${imported} proyectos`,
+      );
+    } catch (error) {
+      setErrorMessage(
+        error?.message || "No se pudieron importar los proyectos",
+      );
+    }
+  };
+
   const submit = async () => {
     const validationError = validateForm(businessName, entities, database, cache);
     if (validationError) {
@@ -887,7 +915,7 @@ function HomePage() {
         onClose={() => setProjectDownloaded(false)}
       >
         <Alert
-          severity={database === "MONGODB" ? "success" : "warning"}
+          severity="success"
           sx={{ width: "95%" }}
         >
           <div>
@@ -896,8 +924,8 @@ function HomePage() {
                 ? "Proyecto GraphQL generado con MongoDB. Incluye GraphiQL en /graphiql; los tests usan Testcontainers y requieren Docker."
                 : "Proyecto MongoDB generado. Los tests usan Testcontainers y requieren Docker."
               : graphQlMode
-                ? `Proyecto GraphQL generado con ${database}. Incluye el esquema y GraphiQL en /graphiql. ${warningMessage}`
-                : warningMessage}
+                ? `Proyecto GraphQL generado con ${database}. Incluye el esquema y GraphiQL en /graphiql. Los tests usan H2 en memoria.`
+                : `Proyecto generado con ${database}. Los tests usan H2 en memoria.`}
           </div>
         </Alert>
       </Snackbar>
@@ -1113,6 +1141,12 @@ function HomePage() {
                 </li>
               </ul>
             )}
+            <p className="help-dialog__intro">
+              En SQL las relaciones se envían por ID:{" "}
+              <code>categoriaId</code> para N:1 y 1:1, y{" "}
+              <code>etiquetasIds</code> para listas (1:N y N:M). En MongoDB las
+              composiciones se envían como objetos anidados.
+            </p>
           </section>
 
           <section className="help-dialog__section">
@@ -1193,9 +1227,9 @@ function HomePage() {
             Los campos <strong>id</strong> y <strong>fechaCreacion</strong> son
             reservados y se agregan automáticamente en las entidades raíz. En
             SQL los tests usan H2 en memoria; en MongoDB usan Testcontainers y
-            requieren Docker. El proyecto es un punto de partida: si usás
-            validaciones sobre relaciones o composiciones, puede que necesites
-            ajustar los builders o tests generados.
+            requieren Docker. Los builders genéricos inicializan las relaciones
+            y composiciones (incluidas las referencias inversas) para que los
+            tests funcionen aunque haya validaciones sobre esos atributos.
           </p>
         </DialogContent>
         <DialogActions className="help-dialog__actions">
@@ -1218,6 +1252,8 @@ function HomePage() {
         onOpenProject={requestOpenProject}
         onDeleteProject={handleDeleteProject}
         onNewProject={requestNewProject}
+        onImport={handleImportProjects}
+        onExport={handleExportProjects}
       />
 
       <OpenProjectDialog

@@ -47,6 +47,26 @@ class StringUtilsTest {
     }
 
     @Test
+    void toClassName_withTitle_returnsPascalCase() {
+        assertEquals("MiProyecto", StringUtils.toClassName("Mi Proyecto"));
+    }
+
+    @Test
+    void toClassName_withLeadingDigit_prefixesProject() {
+        assertEquals("Project123Tienda", StringUtils.toClassName("123 Tienda"));
+    }
+
+    @Test
+    void toDatabaseName_withTitle_returnsSnakeCase() {
+        assertEquals("mi_proyecto", StringUtils.toDatabaseName("Mi Proyecto"));
+    }
+
+    @Test
+    void toDatabaseName_withLeadingDigit_prefixesDb() {
+        assertEquals("db_123_tienda", StringUtils.toDatabaseName("123 Tienda"));
+    }
+
+    @Test
     void escapeXml_withSpecialCharacters_escapesThem() {
         assertEquals("a &amp; b &lt;c&gt; &quot;d&quot; &apos;e&apos;",
                 StringUtils.escapeXml("a & b <c> \"d\" 'e'"));

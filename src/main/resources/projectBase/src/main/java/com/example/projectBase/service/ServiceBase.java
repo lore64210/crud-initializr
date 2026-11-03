@@ -2,11 +2,13 @@ package com.example.projectBase.service;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import com.example.projectBase.repository.REPOSITORY_DECLARATION;
 import com.example.projectBase.domain.DOMAIN_DECLARATION;
-
+RELATION_IMPORTS
 import java.util.List;
+ARRAY_LIST_IMPORT
 import java.util.NoSuchElementException;
 
 CACHE_IMPORTS
@@ -14,7 +16,7 @@ CACHE_IMPORTS
 @RequiredArgsConstructor
 public class SERVICE_DECLARATION {
 
-    EXTERNAL_ENTITIES_SERVICES
+    RELATION_REPOSITORIES
     private final REPOSITORY_DECLARATION REPOSITORY;
 
     CACHE_FIND_ALL
@@ -32,18 +34,20 @@ public class SERVICE_DECLARATION {
         }
     }
 
+    @Transactional
     CACHE_SAVE
     public DOMAIN_DECLARATION save(DOMAIN_DECLARATION DOMAIN) {
+        attachRelations(DOMAIN);
         validateInfo(DOMAIN);
-        SAVE_EXTERNAL_ENTITIES
         return REPOSITORY.save(DOMAIN);
     }
 
+    @Transactional
     CACHE_EDIT
     public DOMAIN_DECLARATION edit(DOMAIN_DECLARATION DOMAIN) {
         Assert.notNull(DOMAIN.getId(), "The field id is obligatory");
+        attachRelations(DOMAIN);
         validateInfo(DOMAIN);
-        SAVE_EXTERNAL_ENTITIES
         return REPOSITORY.save(DOMAIN);
     }
 
@@ -54,6 +58,10 @@ public class SERVICE_DECLARATION {
             throw new IllegalArgumentException("Could not find entity DOMAIN with id: " + id);
         }
         REPOSITORY.deleteById(id);
+    }
+
+    private void attachRelations(DOMAIN_DECLARATION DOMAIN) {
+        ATTACH_RELATIONS
     }
 
     private void validateInfo(DOMAIN_DECLARATION DOMAIN) {

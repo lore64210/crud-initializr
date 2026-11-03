@@ -1,4 +1,5 @@
 import uuid from "react-uuid";
+import { saveAs } from "file-saver";
 
 const STORAGE_KEY = "crud-initializr.saved-projects.v1";
 const SCHEMA_VERSION = 1;
@@ -122,6 +123,62 @@ export const deleteProject = (projectId) => {
   const projects = readStore().filter((project) => project.id !== projectId);
   writeStore(projects);
   return projects;
+};
+
+export const exportProjectsToFile = () => {
+  const payload = {
+    version: SCHEMA_VERSION,
+    items: readStore(),
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+  saveAs(blob, "proyectos-initializr.json");
+};
+
+export const importProjectsFromText = (text) => {
+  let parsed;
+
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error("El archivo no es un JSON válido");
+  }
+
+  const incoming = Array.isArray(parsed)
+    ? parsed
+    : Array.isArray(parsed?.items)
+      ? parsed.items
+      : null;
+
+  if (!incoming) {
+    throw new Error("El archivo no contiene una lista de proyectos");
+  }
+
+  const normalized = incoming
+    .filter((item) => item && typeof item === "object")
+    .map(normalizeProject)
+    .filter((item) => item.name);
+
+  if (normalized.length === 0) {
+    throw new Error("No se encontraron proyectos válidos en el archivo");
+  }
+
+  const projects = readStore();
+  const byId = new Map(projects.map((project) => [project.id, project]));
+
+  normalized.forEach((project) => {
+    const existing = byId.get(project.id);
+    byId.set(project.id, {
+      ...project,
+      createdAt: existing?.createdAt ?? project.createdAt,
+    });
+  });
+
+  const merged = [...byId.values()].sort((a, b) => b.updatedAt - a.updatedAt);
+  writeStore(merged);
+
+  return { projects: merged, imported: normalized.length };
 };
 
 export const projectStorageKey = STORAGE_KEY;

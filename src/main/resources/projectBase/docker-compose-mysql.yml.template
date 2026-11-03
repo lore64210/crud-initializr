@@ -3,7 +3,7 @@ services:
     image: mysql:8.4
     container_name: PROJECT_SLUG-db
     environment:
-      MYSQL_DATABASE: test
+      MYSQL_DATABASE: DATABASE_NAME
       MYSQL_USER: test
       MYSQL_PASSWORD: test
       MYSQL_ROOT_PASSWORD: root

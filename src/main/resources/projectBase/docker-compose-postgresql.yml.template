@@ -3,7 +3,7 @@ services:
     image: postgres:17
     container_name: PROJECT_SLUG-db
     environment:
-      POSTGRES_DB: test
+      POSTGRES_DB: DATABASE_NAME
       POSTGRES_USER: test
       POSTGRES_PASSWORD: test
     ports:

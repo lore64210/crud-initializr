@@ -3,7 +3,7 @@ services:
     image: mariadb:11
     container_name: PROJECT_SLUG-db
     environment:
-      MARIADB_DATABASE: test
+      MARIADB_DATABASE: DATABASE_NAME
       MARIADB_USER: test
       MARIADB_PASSWORD: test
       MARIADB_ROOT_PASSWORD: root

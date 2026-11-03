@@ -5,7 +5,7 @@ services:
     ports:
       - "27017:27017"
     environment:
-      MONGO_INITDB_DATABASE: test
+      MONGO_INITDB_DATABASE: DATABASE_NAME
     volumes:
       - mongo_data:/data/db
 

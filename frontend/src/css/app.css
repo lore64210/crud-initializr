@@ -2099,6 +2099,36 @@ html {
   background-color: rgba(128, 234, 110, 0.1) !important;
 }
 
+.projects-drawer__actions {
+  display: flex;
+  gap: 0.4em;
+}
+
+.projects-drawer__action {
+  flex: 1;
+  color: #9bc98c !important;
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+}
+
+.projects-drawer__action:hover {
+  background-color: rgba(128, 234, 110, 0.08) !important;
+  color: #eaf7e4 !important;
+}
+
+.projects-drawer__action.Mui-disabled {
+  color: #5d6f58 !important;
+}
+
+.projects-drawer__file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .projects-drawer__footer-note {
   color: #71856c;
   font-size: 0.64rem;

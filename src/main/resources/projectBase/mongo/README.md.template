@@ -34,6 +34,8 @@ CACHE_SECTION
 mvn spring-boot:run
 ```
 
+La aplicación fija la zona horaria de la JVM en UTC para que el comportamiento sea consistente entre entornos. Si necesitás otra zona, cambiala en `PROJECT_CLASS`.
+
 API_RUN_INSTRUCTIONS
 
 ## Tests

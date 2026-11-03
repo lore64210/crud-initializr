@@ -15,6 +15,10 @@ public class DOMAINBuilder {
     }
 
     public static DOMAINBuilder generic() {
+        return generic(GENERIC_DEPTH);
+    }
+
+    static DOMAINBuilder generic(int depth) {
         DOMAINBuilder builder = new DOMAINBuilder();
         GENERIC_BUILD
         return builder;

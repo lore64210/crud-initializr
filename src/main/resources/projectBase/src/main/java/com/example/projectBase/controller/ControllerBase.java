@@ -33,14 +33,14 @@ public class ENTITY_DECLARATIONController extends AdviceController {
 
     @Operation(summary = "Crear ENTITY_DECLARATION")
     @PostMapping
-    public ResponseEntity<ENTITY_DECLARATION> save(@RequestBody ENTITY_DECLARATION ENTITY) {
-        return ResponseEntity.ok(SERVICE.save(ENTITY));
+    public ResponseEntity<ENTITY_DECLARATION> save(@RequestBody REQUEST_TYPE request) {
+        SAVE_BODY
     }
 
     @Operation(summary = "Actualizar ENTITY_DECLARATION")
     @PutMapping
-    public ResponseEntity<ENTITY_DECLARATION> edit(@RequestBody ENTITY_DECLARATION ENTITY) {
-        return ResponseEntity.ok(SERVICE.edit(ENTITY));
+    public ResponseEntity<ENTITY_DECLARATION> edit(@RequestBody REQUEST_TYPE request) {
+        EDIT_BODY
     }
 
     @Operation(summary = "Eliminar ENTITY_DECLARATION")

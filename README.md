@@ -34,7 +34,7 @@ El cache es opcional por proyecto: se habilita desde el initializr y se elige qu
 
 ## Proyectos guardados
 
-Desde el header se puede abrir un drawer con los proyectos guardados en el `localStorage` del navegador. Cada proyecto conserva nombre, entidades, base de datos, tipo de API y configuración de Redis. Al abrir uno se puede guardar o descartar el trabajo actual; si el proyecto no tiene nombre, se pide uno antes de guardarlo. Los proyectos quedan solo en ese navegador: no se sincronizan entre dispositivos.
+Desde el header se puede abrir un drawer con los proyectos guardados en el `localStorage` del navegador. Cada proyecto conserva nombre, entidades, base de datos, tipo de API y configuración de Redis. Al abrir uno se puede guardar o descartar el trabajo actual; si el proyecto no tiene nombre, se pide uno antes de guardarlo. Los proyectos quedan solo en ese navegador, pero se pueden mover entre navegadores con los botones **Importar** y **Exportar** del drawer.
 
 ## Requisitos
 
