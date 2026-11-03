@@ -24,6 +24,9 @@ env:
   REGION: ${{ vars.GCP_REGION }}
   GAR_REPOSITORY: ${{ vars.GAR_REPOSITORY }}
   SERVICE: ${{ vars.CLOUD_RUN_SERVICE }}
+  GCP_WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+  GCP_DEPLOY_SA: ${{ vars.GCP_DEPLOY_SA }}
+  GCP_RUNTIME_SA: ${{ vars.GCP_RUNTIME_SA }}
   IMAGE: ${{ vars.GCP_REGION }}-docker.pkg.dev/${{ vars.GCP_PROJECT_ID }}/${{ vars.GAR_REPOSITORY }}/${{ vars.CLOUD_RUN_SERVICE }}
 
 jobs:
@@ -31,6 +34,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Validate repository configuration
+        run: |
+          missing=0
+          for name in PROJECT_ID REGION GAR_REPOSITORY SERVICE GCP_WIF_PROVIDER GCP_DEPLOY_SA GCP_RUNTIME_SA; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Falta configurar la variable de repositorio $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-java@v4
@@ -44,12 +58,11 @@ jobs:
           mvn -B verify
           -Dskip.npm
           -Dskip.installnodenpm
-          -Dfrontend.skip=true
 
       - uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_DEPLOY_SA }}
+          workload_identity_provider: ${{ env.GCP_WIF_PROVIDER }}
+          service_account: ${{ env.GCP_DEPLOY_SA }}
 
       - uses: google-github-actions/setup-gcloud@v2
 
@@ -66,6 +79,9 @@ jobs:
           tags: |
             ${{ env.IMAGE }}:${{ github.sha }}
             ${{ env.IMAGE }}:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -84,5 +100,32 @@ jobs:
             --max-instances 3 \
             --timeout 300 \
             --cpu-boost \
-            --service-account "${{ vars.GCP_RUNTIME_SA }}" \
-            --set-env-vars "JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75 -XX:+UseSerialGC"
+            --service-account "$GCP_RUNTIME_SA" \
+            --set-env-vars "JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75 -XX:+UseSerialGC" \
+            --quiet
+
+      - name: Smoke test
+        run: |
+          URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
+          echo "URL: $URL"
+          for attempt in $(seq 1 12); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/" || true)
+            if [ "$code" = "200" ]; then
+              echo "Smoke test OK (HTTP 200)"
+              exit 0
+            fi
+            echo "Intento $attempt: HTTP $code"
+            sleep 5
+          done
+          echo "::error::Smoke test falló; la revisión no respondió con HTTP 200"
+          exit 1
+
+      - name: Publish deploy summary
+        if: always()
+        run: |
+          {
+            echo "### Backend deploy"
+            echo ""
+            echo "- Imagen: \`$IMAGE:$GITHUB_SHA\`"
+            echo "- Servicio: \`$SERVICE\` en \`$REGION\`"
+          } >> "$GITHUB_STEP_SUMMARY"
