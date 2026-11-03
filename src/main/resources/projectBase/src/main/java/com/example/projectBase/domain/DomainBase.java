@@ -1,6 +1,8 @@
 package com.example.projectBase.domain;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.ToString;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 

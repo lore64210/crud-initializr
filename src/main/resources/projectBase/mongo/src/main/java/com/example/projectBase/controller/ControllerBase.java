@@ -4,10 +4,12 @@ import com.example.projectBase.controller.advice.AdviceController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import lombok.RequiredArgsConstructor;
 IMPORTS
+
 import java.util.List;
 
 @Tag(name = "ENTITY_DECLARATION", description = "Operaciones CRUD de ENTITY_DECLARATION")
@@ -21,25 +23,25 @@ public class ENTITY_DECLARATIONController extends AdviceController {
     @Operation(summary = "Listar todas las entidades ENTITY_DECLARATION")
     @GetMapping
     public ResponseEntity<List<ENTITY_DECLARATION>> findAll() {
-        return ResponseEntity.ok(SERVICE.findAll());
+        FIND_ALL_BODY
     }
 
     @Operation(summary = "Buscar ENTITY_DECLARATION por id")
     @GetMapping("/{id}")
     public ResponseEntity<ENTITY_DECLARATION> findById(
             @PathVariable @Parameter(description = "ID de ENTITY_DECLARATION") String id) {
-        return ResponseEntity.ok(SERVICE.findById(id));
+        FIND_BY_ID_BODY
     }
 
     @Operation(summary = "Crear ENTITY_DECLARATION")
     @PostMapping
-    public ResponseEntity<ENTITY_DECLARATION> save(@RequestBody REQUEST_TYPE request) {
+    public ResponseEntity<ENTITY_DECLARATION> save(@RequestBody ENTITY_DECLARATION request) {
         SAVE_BODY
     }
 
     @Operation(summary = "Actualizar ENTITY_DECLARATION")
     @PutMapping
-    public ResponseEntity<ENTITY_DECLARATION> edit(@RequestBody REQUEST_TYPE request) {
+    public ResponseEntity<ENTITY_DECLARATION> edit(@RequestBody ENTITY_DECLARATION request) {
         EDIT_BODY
     }
 

@@ -1,10 +1,12 @@
 package com.example.projectBase.service;
 
+import com.example.projectBase.controller.advice.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
 import com.example.projectBase.repository.REPOSITORY_DECLARATION;
 import com.example.projectBase.domain.DOMAIN_DECLARATION;
+RELATION_IMPORTS
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -27,7 +29,7 @@ public class SERVICE_DECLARATION {
         try {
             return REPOSITORY.findById(id).orElseThrow();
         } catch (NoSuchElementException exception) {
-            throw new IllegalArgumentException("Could not find entity DOMAIN with id: " + id);
+            throw new NotFoundException("Could not find entity DOMAIN with id: " + id);
         }
     }
 
@@ -40,6 +42,9 @@ public class SERVICE_DECLARATION {
     CACHE_EDIT
     public DOMAIN_DECLARATION edit(DOMAIN_DECLARATION DOMAIN) {
         Assert.notNull(DOMAIN.getId(), "The field id is obligatory");
+        DOMAIN_DECLARATION existing = REPOSITORY.findById(DOMAIN.getId())
+                .orElseThrow(() -> new NotFoundException("Could not find entity DOMAIN with id: " + DOMAIN.getId()));
+        DOMAIN.setFechaCreacion(existing.getFechaCreacion());
         validateInfo(DOMAIN);
         return REPOSITORY.save(DOMAIN);
     }
@@ -48,7 +53,7 @@ public class SERVICE_DECLARATION {
     public void delete(String id) {
         Assert.notNull(id, "The field id is obligatory");
         if (!REPOSITORY.existsById(id)) {
-            throw new IllegalArgumentException("Could not find entity DOMAIN with id: " + id);
+            throw new NotFoundException("Could not find entity DOMAIN with id: " + id);
         }
         REPOSITORY.deleteById(id);
     }

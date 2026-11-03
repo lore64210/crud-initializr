@@ -528,7 +528,7 @@ class DomainServiceTest {
     @Test
     void processDomain_withSchemaColumnCollision_throwsException() {
         Domain domain = validDomain();
-        domain.getEntities().get(0).getAttributes().put("alfaItem", attribute(TypeEnum.CUSTOM, "alfa"));
+        domain.getEntities().get(0).getAttributes().put("alfaItemId", attribute(TypeEnum.STRING, null));
         Entity alfa = entity("alfa");
         alfa.getAttributes().put("item", attribute(TypeEnum.CUSTOM_LIST, "persona"));
         domain.getEntities().add(alfa);
@@ -915,7 +915,7 @@ class DomainServiceTest {
 
         String personaFile = Files.readString(project.resolve(
                 "src/main/java/com/example/projectBase/domain/Persona.java"));
-        assertTrue(personaFile.contains("@OneToOne(cascade = CascadeType.ALL)"));
+        assertTrue(personaFile.contains("@OneToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})"));
         assertTrue(personaFile.contains("@JoinColumn(name = \"direccion_id\", unique = true)"));
         assertTrue(personaFile.contains("private Direccion direccion;"));
 
@@ -1186,14 +1186,22 @@ class DomainServiceTest {
         assertTrue(Files.exists(project.resolve(
                 "src/main/java/com/example/projectBase/config/LoggingCacheErrorHandler.java")));
 
+        String controller = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaController.java"));
+        assertFalse(controller.contains("CACHE_"));
+        assertTrue(controller.contains("import org.springframework.cache.annotation.Cacheable;"));
+        assertTrue(controller.contains("@Cacheable(cacheNames = \"persona\", key = \"#id\")"));
+        assertTrue(controller.contains("@Cacheable(cacheNames = \"persona-list\", key = \"'all'\")"));
+        assertTrue(controller.contains("@Caching(put = @CachePut(cacheNames = \"persona\", key = \"#result.id\"),"));
+        assertTrue(controller.contains("evict = @CacheEvict(cacheNames = \"persona-list\", allEntries = true))"));
+        assertTrue(controller.contains("@Caching(evict = {@CacheEvict(cacheNames = \"persona\", key = \"#id\"),"));
+        assertTrue(controller.contains("@CacheEvict(cacheNames = \"persona-list\", allEntries = true)})"));
+
         String service = Files.readString(project.resolve(
                 "src/main/java/com/example/projectBase/service/PersonaService.java"));
-        assertTrue(service.contains("@Cacheable(cacheNames = \"persona\", key = \"#id\")"));
-        assertTrue(service.contains("@Cacheable(cacheNames = \"persona-list\", key = \"'all'\")"));
-        assertTrue(service.contains("@Caching(put = @CachePut(cacheNames = \"persona\", key = \"#result.id\"),"));
-        assertTrue(service.contains("evict = @CacheEvict(cacheNames = \"persona-list\", allEntries = true))"));
-        assertTrue(service.contains("@Caching(evict = {@CacheEvict(cacheNames = \"persona\", key = \"#id\"),"));
-        assertTrue(service.contains("@CacheEvict(cacheNames = \"persona-list\", allEntries = true)})"));
+        assertFalse(service.contains("@Cacheable"));
+        assertFalse(service.contains("@CachePut"));
+        assertFalse(service.contains("@CacheEvict"));
 
         String properties = Files.readString(project.resolve("src/main/resources/application.properties"));
         assertTrue(properties.contains("app.cache.enabled=true"));
@@ -1252,16 +1260,16 @@ class DomainServiceTest {
 
         Path project = track(domainService.processDomain(domain));
 
-        String personaService = Files.readString(project.resolve(
-                "src/main/java/com/example/projectBase/service/PersonaService.java"));
-        assertFalse(personaService.contains("@Cacheable"));
-        assertFalse(personaService.contains("@CachePut"));
-        assertFalse(personaService.contains("@CacheEvict"));
+        String personaController = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaController.java"));
+        assertFalse(personaController.contains("@Cacheable"));
+        assertFalse(personaController.contains("@CachePut"));
+        assertFalse(personaController.contains("@CacheEvict"));
 
-        String pedidoService = Files.readString(project.resolve(
-                "src/main/java/com/example/projectBase/service/PedidoService.java"));
-        assertTrue(pedidoService.contains("@Cacheable(cacheNames = \"pedido\", key = \"#id\")"));
-        assertTrue(pedidoService.contains("@CachePut(cacheNames = \"pedido\", key = \"#result.id\")"));
+        String pedidoController = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PedidoController.java"));
+        assertTrue(pedidoController.contains("@Cacheable(cacheNames = \"pedido\", key = \"#id\")"));
+        assertTrue(pedidoController.contains("@CachePut(cacheNames = \"pedido\", key = \"#result.id\")"));
 
         String readme = Files.readString(project.resolve("README.md"));
         assertTrue(readme.contains("Entidades cacheadas: `pedido`"));
@@ -1430,6 +1438,160 @@ class DomainServiceTest {
                 () -> domainService.processDomain(domain));
 
         assertTrue(exception.getMessage().contains("campo duplicado"));
+    }
+
+    @Test
+    void processDomain_withRelations_generatesSafeCascadesAndResponseDto() throws IOException {
+        Path project = track(domainService.processDomain(validDomain()));
+
+        String pedido = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Pedido.java"));
+        assertTrue(pedido.contains("@ManyToOne(cascade = {CascadeType.PERSIST, CascadeType.MERGE})"));
+        assertTrue(pedido.contains("@OneToMany(cascade = CascadeType.ALL)"));
+        assertTrue(pedido.contains("@ToString.Exclude"));
+        assertTrue(pedido.contains("@EqualsAndHashCode.Exclude"));
+
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/dto/PedidoResponse.java")));
+        String response = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/dto/PedidoResponse.java"));
+        assertTrue(response.contains("private Long clienteId;"));
+        assertTrue(response.contains("private List<Long> itemsIds;"));
+
+        String responseMapper = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/mapper/PedidoResponseMapper.java"));
+        assertTrue(responseMapper.contains(
+                "response.setClienteId(entity.getCliente() != null ? entity.getCliente().getId() : null);"));
+        assertTrue(responseMapper.contains(
+                "response.setItemsIds(entity.getItems().stream().map(Persona::getId).toList());"));
+
+        String controller = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PedidoController.java"));
+        assertTrue(controller.contains("public List<PedidoResponse> findAll()"));
+        assertTrue(controller.contains("public PedidoResponse findById("));
+        assertTrue(controller.contains("@ResponseStatus(HttpStatus.CREATED)"));
+        assertTrue(controller.contains("PedidoResponseMapper.toResponse"));
+        assertTrue(controller.contains("PedidoMapper.toEntity(request)"));
+    }
+
+    @Test
+    void processDomain_withNotFoundAndEditGuard_generatesNotFoundException() throws IOException {
+        Path project = track(domainService.processDomain(validDomain()));
+
+        assertTrue(Files.exists(project.resolve(
+                "src/main/java/com/example/projectBase/controller/advice/NotFoundException.java")));
+
+        String personaService = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PersonaService.java"));
+        assertTrue(personaService.contains("throw new NotFoundException"));
+        assertTrue(personaService.contains("personaRepository.findById(persona.getId())"));
+        assertTrue(personaService.contains("persona.setFechaCreacion(existing.getFechaCreacion());"));
+
+        String advice = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/advice/AdviceController.java"));
+        assertTrue(advice.contains("handleNotFound"));
+        assertTrue(advice.contains("HttpStatus.NOT_FOUND"));
+        assertTrue(advice.contains("handleConflict"));
+        assertTrue(advice.contains("DataIntegrityViolationException"));
+    }
+
+    @Test
+    void processDomain_withGraphql_generatesNotFoundHandler() throws IOException {
+        Domain domain = validDomain();
+        domain.setApiType(ApiEnum.GRAPHQL);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String handler = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/advice/GraphQLExceptionHandler.java"));
+        assertTrue(handler.contains("ErrorType.NOT_FOUND"));
+        assertTrue(handler.contains("handleNotFound"));
+        assertTrue(handler.contains("DataIntegrityViolationException"));
+    }
+
+    @Test
+    void processDomain_withMongodbCreate_clearsIdAndCreationDate() throws IOException {
+        Domain domain = flatDomain();
+        domain.setDatabase(DatabaseEnum.MONGODB);
+
+        Path project = track(domainService.processDomain(domain));
+
+        String controller = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/controller/PersonaController.java"));
+        assertTrue(controller.contains("request.setId(null);"));
+        assertTrue(controller.contains("request.setFechaCreacion(null);"));
+        assertTrue(controller.contains("ResponseEntity.status(HttpStatus.CREATED)"));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PersonaService.java"));
+        assertTrue(service.contains("throw new NotFoundException"));
+        assertTrue(service.contains("personaRepository.findById(persona.getId())"));
+        assertTrue(service.contains("persona.setFechaCreacion(existing.getFechaCreacion());"));
+    }
+
+    @Test
+    void processDomain_withMongodbCompositionAndEmbeddedValidations_generatesValidateCalls() throws IOException {
+        Domain domain = mongoCompositionDomain();
+        domain.setDatabase(DatabaseEnum.MONGODB);
+        Entity pedido = domain.getEntities().get(0);
+        pedido.getAttributes().put("numero",
+                attribute(TypeEnum.STRING, null, ValidationEnum.NOT_BLANK));
+        Entity direccion = domain.getEntities().get(1);
+        direccion.getAttributes().put("calle",
+                attribute(TypeEnum.STRING, null, ValidationEnum.NOT_BLANK));
+        Entity item = domain.getEntities().get(2);
+        item.getAttributes().put("producto",
+                attribute(TypeEnum.STRING, null, ValidationEnum.NOT_BLANK));
+
+        Path project = track(domainService.processDomain(domain));
+
+        String direccionFile = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Direccion.java"));
+        assertTrue(direccionFile.contains("public void validate()"));
+        assertTrue(direccionFile.contains(
+                "Assert.isTrue(getCalle() != null && !getCalle().isBlank(), \"calle can not be blank\");"));
+
+        String itemFile = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Item.java"));
+        assertTrue(itemFile.contains(
+                "Assert.isTrue(getProducto() != null && !getProducto().isBlank(), \"producto can not be blank\");"));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PedidoService.java"));
+        assertTrue(service.contains("import com.example.projectBase.domain.Direccion;"));
+        assertTrue(service.contains("import com.example.projectBase.domain.Item;"));
+        assertTrue(service.contains("pedido.getDireccion().validate();"));
+        assertTrue(service.contains("itemItem.validate();"));
+    }
+
+    @Test
+    void processDomain_withBidirectionalList_generatesMappedByAndSetsBackReference() throws IOException {
+        Domain domain = new Domain();
+        domain.setTitle("Mi Proyecto");
+        domain.setDatabase(DatabaseEnum.POSTGRESQL);
+
+        Entity pedido = entity("pedido");
+        pedido.getAttributes().put("items", attribute(TypeEnum.CUSTOM_LIST, "item"));
+        Entity item = entity("item");
+        item.getAttributes().put("pedido", attribute(TypeEnum.CUSTOM, "pedido"));
+        domain.setEntities(new ArrayList<>(List.of(pedido, item)));
+
+        Path project = track(domainService.processDomain(domain));
+
+        String pedidoFile = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/domain/Pedido.java"));
+        assertTrue(pedidoFile.contains("@OneToMany(mappedBy = \"pedido\", cascade = CascadeType.ALL)"));
+        assertFalse(pedidoFile.contains("@JoinColumn(name = \"pedido_items_id\")"));
+
+        String service = Files.readString(project.resolve(
+                "src/main/java/com/example/projectBase/service/PedidoService.java"));
+        assertTrue(service.contains("itemValue.setPedido(pedido);"));
+        assertTrue(service.contains(
+                ".orElseThrow(() -> new IllegalArgumentException(\"Item not found with id: \" + itemValue.getId()));"));
+
+        String schema = Files.readString(project.resolve("doc/scripts/schema.sql"));
+        assertTrue(schema.contains("\"pedido_id\" BIGINT"));
+        assertFalse(schema.contains("pedido_items_id"));
     }
 
     private long countOccurrences(String value, String token) {

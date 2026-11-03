@@ -8,4 +8,8 @@ IMPORTS
 public class DOMAIN_NAME {
 
     DOMAIN_ATTRIBUTES
+
+    public void validate() {
+        VALIDATIONS
+    }
 }

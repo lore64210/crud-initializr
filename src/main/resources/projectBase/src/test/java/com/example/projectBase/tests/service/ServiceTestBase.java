@@ -1,6 +1,7 @@
 package com.example.projectBase.tests.service;
 
 import com.example.projectBase.tests.ApplicationTests;
+import com.example.projectBase.controller.advice.NotFoundException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import jakarta.transaction.Transactional;
@@ -52,7 +53,7 @@ public class DOMAIN_DECLARATIONServiceTest extends ApplicationTests {
 
     @Test
     public void findById_withNonExistentId_throwsException() {
-        IllegalArgumentException thrown = assertThrows(IllegalArgumentException.class, () -> {
+        NotFoundException thrown = assertThrows(NotFoundException.class, () -> {
             SERVICE.findById(-1L);
         });
         assertEquals("Could not find entity DOMAIN with id: " + -1L, thrown.getMessage());
@@ -83,6 +84,7 @@ public class DOMAIN_DECLARATIONServiceTest extends ApplicationTests {
         DOMAIN_DECLARATION DOMAIN = DOMAIN_DECLARATIONBuilder.generic().build();
         entityManager.persist(DOMAIN);
         entityManager.flush();
+        entityManager.clear();
         long numberOfRowsInDBBefore = entityManager.createQuery("select count(e) from DOMAIN_DECLARATION e", Long.class).getSingleResult();
 
         SERVICE.delete(DOMAIN.getId());
@@ -94,7 +96,7 @@ public class DOMAIN_DECLARATIONServiceTest extends ApplicationTests {
 
     @Test
     public void delete_withNonExsistentId_throwsException() {
-        assertThrows(IllegalArgumentException.class, () -> {
+        assertThrows(NotFoundException.class, () -> {
             SERVICE.delete(-1L);
         });
     }
