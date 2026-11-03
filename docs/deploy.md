@@ -1,14 +1,16 @@
-# Deploy: Cloudflare Pages + Cloud Run
+# Deploy: Cloud Run (frontend + backend)
 
 Arquitectura:
 
 ```text
-GitHub
-  ├── backend  → GitHub Actions → Docker → Artifact Registry → Cloud Run
-  └── frontend → GitHub Actions → Cloudflare Pages (estático)
+GitHub → GitHub Actions → Docker (frontend + backend) → Artifact Registry → Cloud Run
 ```
 
+El build de Maven compila el frontend y lo deja dentro del jar. Cloud Run sirve la UI en `/` y la API en `/api/**` desde el mismo origen, así que no hace falta CORS ni un deploy separado.
+
 No se usa volumen ni base de datos. El ZIP se genera en un directorio temporal y se borra después de la respuesta. La app es stateless, así que Cloud Run puede escalar a cero.
+
+> Opcional: si querés publicar el frontend por separado en Cloudflare Pages, el workflow queda disponible para ejecución manual. No es necesario para el deploy normal.
 
 ## Antes de empezar
 
@@ -99,7 +101,7 @@ GitHub muestra los workflows de la rama por defecto. Si el repo quedó con `mast
 gh repo edit lore64210/crud-initializr --default-branch main
 ```
 
-## Paso 3: primer deploy del backend
+## Paso 3: deploy
 
 Con las variables configuradas, hacé push a `main` o lanzá el workflow a mano:
 
@@ -111,11 +113,11 @@ gh run watch
 El workflow:
 
 1. Valida que estén todas las variables.
-2. Corre `mvn verify` salteando el build del frontend.
+2. Corre `mvn verify`, que compila el frontend y lo embebe en el jar.
 3. Se autentica en GCP con WIF.
 4. Construye la imagen Docker y la sube a Artifact Registry con tags `latest` y el SHA del commit.
 5. Deploya en Cloud Run con `min-instances=0`, `max-instances=3`, 1 vCPU, 1 GiB, concurrencia 4 y timeout 300 s.
-6. Hace un smoke test contra `/` esperando HTTP 200.
+6. Hace un smoke test contra `/`, `/built/bundle.js` y `/built/css/app.css`.
 
 Al terminar, obtené la URL:
 
@@ -127,7 +129,18 @@ gcloud run services describe crud-initializr \
 
 También queda en el summary del workflow.
 
-## Paso 4: configurar y desplegar el frontend
+## Paso 4: verificar
+
+Abrí la URL de Cloud Run: debería cargar la UI. El mismo origen sirve la API, así que no hay CORS de por medio.
+
+```bash
+curl -I https://<url-de-cloud-run>/
+curl -I https://<url-de-cloud-run>/built/bundle.js
+```
+
+## Opción B: frontend separado en Cloudflare Pages
+
+No es necesario para el deploy normal. Solo si querés publicar el frontend por separado, por ejemplo para descargar el tráfico estático de Cloud Run.
 
 El frontend necesita la URL del backend **en tiempo de build**.
 
@@ -169,16 +182,15 @@ Si cambiás `API_URL`, volvé a ejecutar el workflow del frontend: la URL se iny
 
 ## Flujo automático
 
-- `deploy-backend.yml` corre con pushes a `main` que toquen `src/**`, `pom.xml`, `Dockerfile`, `.dockerignore` o el propio workflow.
-- `deploy-frontend.yml` corre con pushes a `main` que toquen `frontend/**` o el propio workflow.
-- Ambos se pueden disparar a mano con `workflow_dispatch`.
+- `deploy-backend.yml` corre con pushes a `main` que toquen `src/**`, `frontend/**`, `pom.xml`, `Dockerfile`, `.dockerignore` o el propio workflow. Compila frontend y backend en la misma imagen.
+- `deploy-frontend.yml` es opcional y solo corre manualmente (`workflow_dispatch`).
 
 ## Costos y límites
 
 - **Cloud Run free tier**: 2M requests, 180.000 vCPU-seconds y 360.000 GiB-seconds por mes, más 1 GB de egress desde Norteamérica. Con `min-instances=0` y tráfico bajo, el costo esperado es USD 0.
 - **Artifact Registry free tier**: 0,5 GB. La política de retención deja solo 2 versiones. Si la imagen crece y supera ese espacio, el cargo es mínimo (~USD 0,10/GB-mes); en ese caso bajá `keepCount` a 1.
-- **Cloudflare Pages**: estáticos gratis, sin costo por bandwidth en el plan Free.
-- **Egress de Cloud Run**: solo API y ZIPs (~12 KB cada uno). El bundle del frontend sale desde Cloudflare.
+- **Cloudflare Pages** (opcional): estáticos gratis, sin costo por bandwidth en el plan Free.
+- **Egress de Cloud Run**: UI, API y ZIPs (~12 KB cada uno). El bundle del frontend se sirve desde Cloud Run y cuenta contra el 1 GB gratis desde Norteamérica. Si el tráfico crece, la opción B (Cloudflare Pages) descarga ese tráfico.
 
 Configurá un budget alert:
 
@@ -242,9 +254,9 @@ Mirá los logs:
 gcloud run services logs read crud-initializr --region us-central1 --limit 100
 ```
 
-**CORS en el frontend**
+**CORS en el frontend separado**
 
-`CorsConfig` permite `http://localhost:3000`, `https://*.pages.dev` y `https://*.vercel.app`. Si usás un dominio propio, agregalo a `allowedOriginPatterns` y volvé a desplegar el backend.
+Con el deploy single-service no hay CORS. Solo aplica a la opción B: `CorsConfig` permite `http://localhost:3000`, `https://*.pages.dev` y `https://*.vercel.app`. Si usás un dominio propio, agregalo a `allowedOriginPatterns` y volvé a desplegar el backend.
 
 **Cold start**
 

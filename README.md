@@ -77,13 +77,16 @@ Incluye tests del generador (dominio, servicios, tests, esquema SQL, relaciones 
 
 ## Deploy
 
-El frontend se despliega en **Cloudflare Pages** y el backend en **Cloud Run**.
+El backend y el frontend se despliegan juntos en **Cloud Run**. El build de Maven compila el frontend dentro del jar, así que la imagen Docker sirve la UI y la API desde el mismo origen.
+
+Opcionalmente, el frontend se puede publicar por separado en **Cloudflare Pages** con `.github/workflows/deploy-frontend.yml` (solo manual).
 
 El detalle de variables, secretos y workflows está en [`docs/deploy.md`](docs/deploy.md).
 
 - Bootstrap de GCP desde cero: `scripts/bootstrap-gcp.sh` (Cloud Shell) o `scripts/bootstrap-gcp.ps1` (Windows).
-- Frontend: `frontend`, build `npm run build:pages`, output `dist`.
+- Frontend: se compila con `npm run build` durante `mvn verify` y queda embebido en el jar.
 - Backend: Docker → Artifact Registry → Cloud Run.
-- GitHub Actions: `.github/workflows/deploy-backend.yml` y `.github/workflows/deploy-frontend.yml`.
-- CORS: `CorsConfig` permite `*.pages.dev` y `localhost:3000`.
+- GitHub Actions: `.github/workflows/deploy-backend.yml`.
+- Opcional: `.github/workflows/deploy-frontend.yml` para Cloudflare Pages.
+- CORS: `CorsConfig` permite `*.pages.dev` y `localhost:3000`; no hace falta para el deploy single-service.
 - No se usa volumen: la app es stateless.

@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "frontend/**"
       - "pom.xml"
       - "Dockerfile"
       - ".dockerignore"
@@ -53,11 +54,8 @@ jobs:
           java-version: "17"
           cache: maven
 
-      - name: Test and package backend
-        run: >-
-          mvn -B verify
-          -Dskip.npm
-          -Dskip.installnodenpm
+      - name: Test and package backend + frontend
+        run: mvn -B verify
 
       - uses: google-github-actions/auth@v2
         with:
@@ -109,15 +107,22 @@ jobs:
           URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --format='value(status.url)')
           echo "URL: $URL"
           for attempt in $(seq 1 12); do
-            code=$(curl -s -o /dev/null -w '%{http_code}' "$URL/" || true)
-            if [ "$code" = "200" ]; then
-              echo "Smoke test OK (HTTP 200)"
+            ok=1
+            for path in "/" "/built/bundle.js" "/built/css/app.css"; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' "$URL$path" || true)
+              if [ "$code" != "200" ]; then
+                echo "Intento $attempt: $path respondió HTTP $code"
+                ok=0
+                break
+              fi
+            done
+            if [ "$ok" = "1" ]; then
+              echo "Smoke test OK: frontend y backend responden"
               exit 0
             fi
-            echo "Intento $attempt: HTTP $code"
             sleep 5
           done
-          echo "::error::Smoke test falló; la revisión no respondió con HTTP 200"
+          echo "::error::Smoke test falló; la revisión no sirvió el frontend o el backend"
           exit 1
 
       - name: Publish deploy summary

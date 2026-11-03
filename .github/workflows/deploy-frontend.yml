@@ -1,11 +1,8 @@
-name: Deploy frontend to Cloudflare Pages
+name: Deploy frontend to Cloudflare Pages (optional)
 
+# Por defecto el frontend se compila dentro del jar y se sirve desde Cloud Run.
+# Este workflow queda solo para quien quiera publicar el frontend por separado.
 on:
-  push:
-    branches: [main]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
 permissions:
