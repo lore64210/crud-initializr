@@ -81,7 +81,7 @@ El frontend se despliega en **Cloudflare Pages** y el backend en **Cloud Run**.
 
 El detalle de variables, secretos y workflows está en [`docs/deploy.md`](docs/deploy.md).
 
-- Bootstrap de GCP desde cero: `scripts/bootstrap-gcp.sh` (Cloud Shell).
+- Bootstrap de GCP desde cero: `scripts/bootstrap-gcp.sh` (Cloud Shell) o `scripts/bootstrap-gcp.ps1` (Windows).
 - Frontend: `frontend`, build `npm run build:pages`, output `dist`.
 - Backend: Docker → Artifact Registry → Cloud Run.
 - GitHub Actions: `.github/workflows/deploy-backend.yml` y `.github/workflows/deploy-frontend.yml`.

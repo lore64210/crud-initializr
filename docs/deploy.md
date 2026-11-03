@@ -55,6 +55,16 @@ El script:
 - Crea el pool/provider de Workload Identity Federation restringido a tu repo y a la rama `main`.
 - Imprime los comandos de `gh` para configurar GitHub.
 
+En Windows, con `gcloud` instalado y autenticado, podés usar la versión PowerShell:
+
+```powershell
+.\scripts\bootstrap-gcp.ps1 `
+  -ProjectId spring-crud-initializr `
+  -GarRepository spring-crud-initializr `
+  -Service spring-crud-initializr `
+  -GitHubRepo lore64210/crud-initializr
+```
+
 Al finalizar, copiá los comandos que imprime el script.
 
 ## Paso 2: configurar GitHub

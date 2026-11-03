@@ -121,6 +121,7 @@ JSON
 gcloud artifacts repositories set-cleanup-policies "$GAR_REPOSITORY" \
   --location="$REGION" \
   --policy="$POLICY_FILE" \
+  --no-dry-run \
   --project="$PROJECT_ID"
 
 echo "==> Asignando roles al deployer de GitHub Actions"
