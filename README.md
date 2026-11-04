@@ -36,6 +36,19 @@ El cache es opcional por proyecto: se habilita desde el initializr y se elige qu
 
 Desde el header se puede abrir un drawer con los proyectos guardados en el `localStorage` del navegador. Cada proyecto conserva nombre, entidades, base de datos, tipo de API y configuración de Redis. Al abrir uno se puede guardar o descartar el trabajo actual; si el proyecto no tiene nombre, se pide uno antes de guardarlo. Los proyectos quedan solo en ese navegador, pero se pueden mover entre navegadores con los botones **Importar** y **Exportar** del drawer.
 
+## Idioma
+
+La interfaz está disponible en español e inglés. El selector **ES/EN** del header cambia el idioma y lo guarda en el navegador.
+
+Para enlazar directamente a un idioma (por ejemplo desde un portfolio) se puede usar cualquiera de estas formas:
+
+- `/?lang=en` o `/?lang=es`
+- `/?language=en`, `/?locale=en` o `/?lng=en`
+- `/en` o `/es`
+- `/#lang=en`
+
+El idioma de la URL tiene prioridad sobre la preferencia guardada, y al cambiar el idioma con el selector la URL se actualiza para que el enlace sea compartible. El frontend envía el header `Accept-Language` al backend, así los errores de validación también se muestran en el idioma elegido.
+
 ## Requisitos
 
 - Java 17

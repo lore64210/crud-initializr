@@ -1,6 +1,67 @@
 export const DEFAULT_LANGUAGE = "es";
 export const LANGUAGES = ["es", "en"];
 export const LANGUAGE_STORAGE_KEY = "crud-initializr-language";
+export const LANGUAGE_URL_KEYS = ["lang", "language", "locale", "lng"];
+
+export const normalizeLanguage = (value) => {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (normalized.startsWith("en") || normalized === "english") {
+    return "en";
+  }
+  if (normalized.startsWith("es") || normalized === "spanish" || normalized === "español") {
+    return "es";
+  }
+  return null;
+};
+
+/**
+ * Reads the language from the URL so links coming from the portfolio can
+ * preselect it. Supported forms:
+ *   https://app.example.com/?lang=en
+ *   https://app.example.com/?language=es
+ *   https://app.example.com/en
+ *   https://app.example.com/es
+ *   https://app.example.com/#lang=en
+ */
+export const readLanguageFromUrl = (href) => {
+  if (typeof window === "undefined" && !href) {
+    return null;
+  }
+
+  try {
+    const url = new URL(href || window.location.href);
+
+    const firstSegment = url.pathname.split("/").filter(Boolean)[0];
+    const pathLanguage = normalizeLanguage(firstSegment);
+    if (pathLanguage) {
+      return pathLanguage;
+    }
+
+    for (const key of LANGUAGE_URL_KEYS) {
+      const language = normalizeLanguage(url.searchParams.get(key));
+      if (language) {
+        return language;
+      }
+    }
+
+    if (url.hash) {
+      const hashParams = new URLSearchParams(url.hash.replace(/^#/, ""));
+      for (const key of LANGUAGE_URL_KEYS) {
+        const language = normalizeLanguage(hashParams.get(key));
+        if (language) {
+          return language;
+        }
+      }
+    }
+  } catch {
+    // Ignore malformed URLs and fall back to the stored/browser language.
+  }
+
+  return null;
+};
 
 const plural = (count, singular, pluralForm) =>
   count === 1 ? singular : pluralForm;
@@ -956,6 +1017,11 @@ export const translations = {
 };
 
 export const detectLanguage = () => {
+  const fromUrl = readLanguageFromUrl();
+  if (fromUrl) {
+    return fromUrl;
+  }
+
   try {
     const stored = window.localStorage.getItem(LANGUAGE_STORAGE_KEY);
     if (LANGUAGES.includes(stored)) {
