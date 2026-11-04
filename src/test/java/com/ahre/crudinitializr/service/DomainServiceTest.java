@@ -10,6 +10,9 @@ import com.ahre.crudinitializr.vo.Domain;
 import com.ahre.crudinitializr.vo.Entity;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.web.MockHttpServletRequest;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -608,6 +611,42 @@ class DomainServiceTest {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> domainService.processDomain(domain));
 
         assertTrue(exception.getMessage().contains("nombre del proyecto"));
+    }
+
+    @Test
+    void processDomain_withAcceptLanguageEnglish_returnsEnglishMessage() {
+        Domain domain = validDomain();
+        domain.setTitle("   ");
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept-Language", "en-US,en;q=0.9");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                    () -> domainService.processDomain(domain));
+
+            assertEquals("The project name cannot be empty", exception.getMessage());
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
+    }
+
+    @Test
+    void processDomain_withAcceptLanguageSpanish_returnsSpanishMessage() {
+        Domain domain = validDomain();
+        domain.setTitle("   ");
+
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.addHeader("Accept-Language", "es-AR");
+        RequestContextHolder.setRequestAttributes(new ServletRequestAttributes(request));
+        try {
+            IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                    () -> domainService.processDomain(domain));
+
+            assertEquals("El nombre del proyecto no puede estar vacío", exception.getMessage());
+        } finally {
+            RequestContextHolder.resetRequestAttributes();
+        }
     }
 
     @Test

@@ -72,7 +72,10 @@ const service = {
       const response = await fetch(`${API_BASE_URL}/api/domain`, {
         method: "POST",
         body: JSON.stringify(createRequestBody(data)),
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Accept-Language": language,
+        },
       });
 
       if (!response.ok) {

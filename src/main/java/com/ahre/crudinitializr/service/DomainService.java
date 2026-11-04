@@ -11,8 +11,12 @@ import com.ahre.crudinitializr.vo.CacheSettings;
 import com.ahre.crudinitializr.vo.Domain;
 import com.ahre.crudinitializr.vo.Entity;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.Assert;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -22,12 +26,17 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
 public class DomainService {
+
+    private static final Locale SPANISH = Locale.forLanguageTag("es");
+    private static final Locale ENGLISH = Locale.ENGLISH;
+    private static final MessageSource MESSAGES = createMessages();
 
     private static final Set<String> JAVA_KEYWORDS = Set.of(
             "abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const",
@@ -42,6 +51,40 @@ public class DomainService {
     private final String srcPath;
     private final String testPath;
     private final String importProjectBasePath;
+
+    private static MessageSource createMessages() {
+        ResourceBundleMessageSource messages = new ResourceBundleMessageSource();
+        messages.setBasename("messages");
+        messages.setDefaultEncoding("UTF-8");
+        // Without this, ResourceBundle falls back to the JVM locale (often
+        // English) before the base bundle, which is Spanish.
+        messages.setFallbackToSystemLocale(false);
+        return messages;
+    }
+
+    /**
+     * Outside a web request (for example, unit tests) Spanish is used so the
+     * default behaviour does not depend on the JVM locale. During a request the
+     * language comes from the standard {@code Accept-Language} header.
+     */
+    private static Locale currentLocale() {
+        if (RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes) {
+            String header = attributes.getRequest().getHeader("Accept-Language");
+            if (header != null && !header.isBlank()) {
+                String preferred = header.split(",")[0].trim().toLowerCase(Locale.ROOT);
+                return preferred.startsWith("en") ? ENGLISH : SPANISH;
+            }
+        }
+        return SPANISH;
+    }
+
+    private static String msg(String key, Object... args) {
+        String pattern = MESSAGES.getMessage(key, null, key, currentLocale());
+        for (int index = 0; index < args.length; index++) {
+            pattern = pattern.replace("{" + index + "}", String.valueOf(args[index]));
+        }
+        return pattern;
+    }
 
     public DomainService(FileUtils fileUtils,
                          @Value("${srcPath}") String srcPath,
@@ -99,7 +142,7 @@ public class DomainService {
             return project;
         } catch (IOException e) {
             fileUtils.deleteQuietly(project);
-            throw new IllegalArgumentException("No se pudo crear el proyecto", e);
+            throw new IllegalArgumentException(msg("project.createFailed"), e);
         } catch (RuntimeException e) {
             fileUtils.deleteQuietly(project);
             throw e;
@@ -107,35 +150,35 @@ public class DomainService {
     }
 
     void validateDomain(Domain domain) {
-        Assert.notNull(domain, "El dominio no puede estar vacío");
+        Assert.notNull(domain, msg("domain.null"));
 
         String title = domain.getTitle();
-        Assert.notNull(title, "El nombre del proyecto no puede estar vacío");
-        Assert.isTrue(!title.trim().isEmpty(), "El nombre del proyecto no puede estar vacío");
-        Assert.isTrue(title.trim().length() <= 30, "El nombre del proyecto no puede tener más de 30 caracteres");
+        Assert.notNull(title, msg("project.name.empty"));
+        Assert.isTrue(!title.trim().isEmpty(), msg("project.name.empty"));
+        Assert.isTrue(title.trim().length() <= 30, msg("project.name.tooLong"));
 
         List<Entity> entities = domain.getEntities();
-        Assert.notNull(entities, "La lista de entidades no puede ser nula");
-        Assert.notEmpty(entities, "El proyecto debe tener al menos una entidad");
+        Assert.notNull(entities, msg("entities.null"));
+        Assert.notEmpty(entities, msg("entities.empty"));
 
         Set<String> entityClassNames = new HashSet<>();
         Set<String> tableNames = new HashSet<>();
         for (Entity entity : entities) {
-            Assert.notNull(entity, "Las entidades no pueden ser nulas");
+            Assert.notNull(entity, msg("entity.null"));
 
             String entityName = entity.getEntityName();
-            Assert.isTrue(entityName != null && !entityName.trim().isEmpty(), "El nombre de una entidad no puede estar vacío");
-            Assert.isTrue(entityName.trim().length() <= 30, "El nombre de la entidad '" + entityName + "' no puede tener más de 30 caracteres");
-            Assert.isTrue(isJavaIdentifier(entityName), "El nombre de la entidad '" + entityName + "' no es válido: debe empezar con una letra y no contener espacios ni caracteres especiales");
+            Assert.isTrue(entityName != null && !entityName.trim().isEmpty(), msg("entity.name.empty"));
+            Assert.isTrue(entityName.trim().length() <= 30, msg("entity.name.tooLong", entityName));
+            Assert.isTrue(isJavaIdentifier(entityName), msg("entity.name.invalid", entityName));
 
             String entityClassName = StringUtils.capitalizeFirstCharacter(entityName);
-            Assert.isTrue(entityClassNames.add(entityClassName), "El nombre de la entidad '" + entityName + "' está repetido");
+            Assert.isTrue(entityClassNames.add(entityClassName), msg("entity.name.duplicate", entityName));
 
             String tableName = StringUtils.transformToSnakeCase(entityName);
-            Assert.isTrue(tableNames.add(tableName), "El nombre de la entidad '" + entityName + "' genera la tabla repetida '" + tableName + "'");
+            Assert.isTrue(tableNames.add(tableName), msg("entity.table.duplicate", entityName, tableName));
 
             Map<String, Attribute> attributes = entity.getAttributes();
-            Assert.notNull(attributes, "La lista de atributos de la entidad '" + entityName + "' no puede ser nula");
+            Assert.notNull(attributes, msg("entity.attributes.null", entityName));
 
             Set<String> attributeNames = new HashSet<>();
             Set<String> attributeColumns = new HashSet<>();
@@ -143,25 +186,25 @@ public class DomainService {
                 String key = entry.getKey();
                 Attribute value = entry.getValue();
 
-                Assert.isTrue(key != null && !key.trim().isEmpty(), "Todos los atributos deben tener un nombre");
-                Assert.isTrue(key.trim().length() <= 30, "El nombre del atributo '" + key + "' no puede tener más de 30 caracteres");
-                Assert.isTrue(isJavaIdentifier(key), "El nombre del atributo '" + key + "' no es válido: debe empezar con una letra y no contener espacios ni caracteres especiales");
-                Assert.isTrue(attributeNames.add(StringUtils.capitalizeFirstCharacter(key)), "El atributo '" + key + "' está repetido en la entidad '" + entityName + "'");
+                Assert.isTrue(key != null && !key.trim().isEmpty(), msg("attribute.name.empty"));
+                Assert.isTrue(key.trim().length() <= 30, msg("attribute.name.tooLong", key));
+                Assert.isTrue(isJavaIdentifier(key), msg("attribute.name.invalid", key));
+                Assert.isTrue(attributeNames.add(StringUtils.capitalizeFirstCharacter(key)), msg("attribute.name.duplicate", key, entityName));
 
                 String columnName = StringUtils.transformToSnakeCase(key);
                 Assert.isTrue(!columnName.equals("id") && !columnName.equals("fecha_creacion"),
-                        "El atributo '" + key + "' no puede llamarse id ni fechaCreacion: son columnas reservadas de la entidad");
+                        msg("attribute.reserved", key));
                 Assert.isTrue(attributeColumns.add(columnName),
-                        "El atributo '" + key + "' genera la columna duplicada '" + columnName + "' en la entidad '" + entityName + "'");
+                        msg("attribute.column.duplicate", key, columnName, entityName));
 
-                Assert.notNull(value, "Todos los atributos deben tener un tipo");
+                Assert.notNull(value, msg("attribute.type.empty"));
                 TypeEnum type = value.getType();
-                Assert.notNull(type, "Todos los atributos deben tener un tipo");
+                Assert.notNull(type, msg("attribute.type.empty"));
 
                 if (isLink(type)) {
                     String customType = value.getCustomType();
-                    Assert.isTrue(customType != null && !customType.trim().isEmpty(), "El tipo de relación del atributo '" + key + "' no puede estar vacío");
-                    Assert.isTrue(isJavaIdentifier(customType), "El tipo de relación '" + customType + "' del atributo '" + key + "' no es válido");
+                    Assert.isTrue(customType != null && !customType.trim().isEmpty(), msg("attribute.relation.type.empty", key));
+                    Assert.isTrue(isJavaIdentifier(customType), msg("attribute.relation.type.invalid", customType, key));
                 }
 
                 List<ValidationEnum> validations = value.getValidations();
@@ -179,24 +222,24 @@ public class DomainService {
                             case PAST, PAST_OR_PRESENT, FUTURE, FUTURE_OR_PRESENT -> isTemporal(type);
                             case POSITIVE, NEGATIVE, POSITIVE_OR_ZERO, NEGATIVE_OR_ZERO, MIN, MAX -> isNumeric(type);
                         };
-                        Assert.isTrue(allowed, "La validación " + validation + " no es válida para el atributo '" + key + "' de tipo " + type);
+                        Assert.isTrue(allowed, msg("attribute.validation.notAllowed", validation, key, type));
                         hasMinValidation = hasMinValidation || validation == ValidationEnum.MIN;
                         hasMaxValidation = hasMaxValidation || validation == ValidationEnum.MAX;
                     }
                 }
 
                 if (hasMinValidation) {
-                    Assert.notNull(value.getMinValue(), "El atributo '" + key + "' requiere un valor mínimo");
+                    Assert.notNull(value.getMinValue(), msg("attribute.validation.minRequired", key));
                 }
                 if (hasMaxValidation) {
-                    Assert.notNull(value.getMaxValue(), "El atributo '" + key + "' requiere un valor máximo");
+                    Assert.notNull(value.getMaxValue(), msg("attribute.validation.maxRequired", key));
                 }
                 if (value.getMinValue() != null && value.getMaxValue() != null) {
                     Assert.isTrue(value.getMinValue().compareTo(value.getMaxValue()) <= 0,
-                            "El valor mínimo del atributo '" + key + "' no puede ser mayor que el máximo");
+                            msg("attribute.validation.minGreaterThanMax", key));
                 }
-                validateNumericBound(type, value.getMinValue(), key, "mínimo");
-                validateNumericBound(type, value.getMaxValue(), key, "máximo");
+                validateNumericBound(type, value.getMinValue(), key, msg("attribute.bound.min"));
+                validateNumericBound(type, value.getMaxValue(), key, msg("attribute.bound.max"));
                 validateNumericValidationConsistency(value, key);
             }
         }
@@ -208,9 +251,9 @@ public class DomainService {
                 if (isLink(value.getType())) {
                     String customClassName = StringUtils.capitalizeFirstCharacter(value.getCustomType());
                     Assert.isTrue(entityClassNames.contains(customClassName),
-                            "El atributo '" + entry.getKey() + "' de la entidad '" + entity.getEntityName() + "' referencia a una entidad inexistente: " + value.getCustomType());
+                            msg("attribute.reference.missing", entry.getKey(), entity.getEntityName(), value.getCustomType()));
                     Assert.isTrue(!customClassName.equals(entityClassName),
-                            "El atributo '" + entry.getKey() + "' de la entidad '" + entity.getEntityName() + "' no puede referenciarse a sí mismo");
+                            msg("attribute.reference.self", entry.getKey(), entity.getEntityName()));
                 }
             }
         }
@@ -242,13 +285,11 @@ public class DomainService {
 
             String entityClassName = StringUtils.capitalizeFirstCharacter(entity.getEntityName());
             Assert.isTrue(!reservedTypeNames.contains(entityClassName),
-                    "La entidad '" + entity.getEntityName() + "' no puede llamarse '" + entityClassName
-                            + "' cuando se genera una API GraphQL: es un tipo reservado del esquema");
+                    msg("graphql.reservedType", entity.getEntityName(), entityClassName));
             Assert.isTrue(schemaTypeNames.add(entityClassName),
-                    "El esquema GraphQL generaría el tipo duplicado '" + entityClassName + "'");
+                    msg("graphql.duplicateType", entityClassName));
             Assert.isTrue(schemaTypeNames.add(entityClassName + "Input"),
-                    "El esquema GraphQL generaría el tipo duplicado '" + entityClassName
-                            + "Input'. Renombrá la entidad que entra en conflicto");
+                    msg("graphql.duplicateInputType", entityClassName));
 
             Set<String> outputFields = new HashSet<>();
             Set<String> inputFields = new HashSet<>();
@@ -261,16 +302,14 @@ public class DomainService {
             for (Map.Entry<String, Attribute> entry : entity.getAttributes().entrySet()) {
                 String fieldName = graphQlFieldName(entry.getKey(), entry.getValue().getType());
                 Assert.isTrue(outputFields.add(fieldName),
-                        "El esquema GraphQL generaría el campo duplicado '" + fieldName
-                                + "' en el tipo '" + entityClassName + "'");
+                        msg("graphql.duplicateOutputField", fieldName, entityClassName));
                 Assert.isTrue(inputFields.add(fieldName),
-                        "El esquema GraphQL generaría el campo duplicado '" + fieldName
-                                + "' en el input '" + entityClassName + "Input'");
+                        msg("graphql.duplicateInputField", fieldName, entityClassName));
             }
         }
 
         Assert.isTrue(hasRootEntity,
-                "El proyecto debe tener al menos una entidad raíz para generar una API GraphQL");
+                msg("graphql.rootEntityRequired"));
     }
 
     private void validateCacheSettings(Domain domain, CacheSettings cache) {
@@ -280,19 +319,19 @@ public class DomainService {
 
         String prefix = cache.getPrefix();
         Assert.isTrue(prefix != null && !prefix.trim().isEmpty(),
-                "El prefijo de claves de Redis no puede estar vacío");
+                msg("cache.prefix.empty"));
         prefix = prefix.trim();
         Assert.isTrue(prefix.length() <= 50,
-                "El prefijo de claves de Redis no puede tener más de 50 caracteres");
+                msg("cache.prefix.tooLong"));
         Assert.isTrue(prefix.matches("[A-Za-z0-9:_-]+"),
-                "El prefijo de claves de Redis solo puede contener letras, números, ':', '_' y '-'");
+                msg("cache.prefix.invalidChars"));
         Assert.isTrue(cache.getTtlSeconds() > 0,
-                "El TTL de Redis debe ser mayor que cero");
+                msg("cache.ttl.positive"));
         Assert.isTrue(cache.getTtlSeconds() <= 31_536_000,
-                "El TTL de Redis no puede superar un año");
+                msg("cache.ttl.tooLarge"));
         Assert.isTrue(domain.getEntities().stream()
                         .anyMatch(entity -> !entity.isEmbedded() && entity.isCacheEnabled()),
-                "Seleccioná al menos una entidad para cachear o deshabilitá el cache Redis");
+                msg("cache.noEntities"));
         cache.setPrefix(prefix);
     }
 
@@ -300,14 +339,12 @@ public class DomainService {
         for (Entity entity : domain.getEntities()) {
             if (entity.isEmbedded()) {
                 throw new IllegalArgumentException(
-                        "La entidad '" + entity.getEntityName()
-                                + "' está marcada como documento embebido y solo es válida para MongoDB.");
+                        msg("sql.embeddedEntity", entity.getEntityName()));
             }
             for (Map.Entry<String, Attribute> entry : entity.getAttributes().entrySet()) {
                 if (isComposition(entry.getValue().getType())) {
                     throw new IllegalArgumentException(
-                            "La composición '" + entry.getKey() + "' de la entidad '" + entity.getEntityName()
-                                    + "' solo es válida para MongoDB. Cambiala a una relación SQL o eliminála.");
+                            msg("sql.composition", entry.getKey(), entity.getEntityName()));
                 }
             }
         }
@@ -324,9 +361,7 @@ public class DomainService {
                 Attribute attribute = entry.getValue();
                 if (isRelation(attribute.getType())) {
                     throw new IllegalArgumentException(
-                            "MongoDB no soporta relaciones SQL en esta versión. El atributo '" + entry.getKey()
-                                    + "' de la entidad '" + entity.getEntityName()
-                                    + "' es una relación. Cambialo a una composición o elegí una base de datos SQL.");
+                            msg("mongo.relation", entry.getKey(), entity.getEntityName()));
                 }
 
                 if (!isComposition(attribute.getType())) {
@@ -335,15 +370,13 @@ public class DomainService {
 
                 if (entity.isEmbedded()) {
                     throw new IllegalArgumentException(
-                            "La entidad embebida '" + entity.getEntityName()
-                                    + "' no puede contener composiciones en esta versión.");
+                            msg("mongo.embeddedComposition", entity.getEntityName()));
                 }
 
                 Entity target = entitiesByName.get(StringUtils.capitalizeFirstCharacter(attribute.getCustomType()));
                 if (target == null || !target.isEmbedded()) {
                     throw new IllegalArgumentException(
-                            "La composición '" + entry.getKey() + "' de la entidad '" + entity.getEntityName()
-                                    + "' debe apuntar a un documento embebido.");
+                            msg("mongo.compositionTarget", entry.getKey(), entity.getEntityName()));
                 }
             }
         }
@@ -397,17 +430,17 @@ public class DomainService {
         BigDecimal maxValue = attribute.getMaxValue();
 
         Assert.isTrue(!(positive && (negative || negativeOrZero)),
-                "El atributo '" + attributeName + "' no puede ser positivo y negativo a la vez");
+                msg("attribute.positiveAndNegative", attributeName));
         Assert.isTrue(!(negative && positiveOrZero),
-                "El atributo '" + attributeName + "' no puede ser negativo y positivo o cero a la vez");
+                msg("attribute.negativeAndPositiveOrZero", attributeName));
         Assert.isTrue(!(positive && maxValue != null && maxValue.compareTo(BigDecimal.ZERO) <= 0),
-                "El atributo '" + attributeName + "' es positivo, pero su valor máximo no lo permite");
+                msg("attribute.positiveMax", attributeName));
         Assert.isTrue(!(positiveOrZero && maxValue != null && maxValue.compareTo(BigDecimal.ZERO) < 0),
-                "El atributo '" + attributeName + "' es positivo o cero, pero su valor máximo no lo permite");
+                msg("attribute.positiveOrZeroMax", attributeName));
         Assert.isTrue(!(negative && minValue != null && minValue.compareTo(BigDecimal.ZERO) >= 0),
-                "El atributo '" + attributeName + "' es negativo, pero su valor mínimo no lo permite");
+                msg("attribute.negativeMin", attributeName));
         Assert.isTrue(!(negativeOrZero && minValue != null && minValue.compareTo(BigDecimal.ZERO) > 0),
-                "El atributo '" + attributeName + "' es negativo o cero, pero su valor mínimo no lo permite");
+                msg("attribute.negativeOrZeroMin", attributeName));
     }
 
     private void validateNumericBound(TypeEnum type, BigDecimal bound, String attributeName, String boundName) {
@@ -416,16 +449,16 @@ public class DomainService {
         }
         if (type == TypeEnum.INTEGER) {
             Assert.isTrue(bound.stripTrailingZeros().scale() <= 0,
-                    "El valor " + boundName + " del atributo '" + attributeName + "' debe ser un número entero");
+                    msg("attribute.bound.integer", boundName, attributeName));
             Assert.isTrue(bound.compareTo(BigDecimal.valueOf(Integer.MIN_VALUE)) >= 0
                             && bound.compareTo(BigDecimal.valueOf(Integer.MAX_VALUE)) <= 0,
-                    "El valor " + boundName + " del atributo '" + attributeName + "' está fuera del rango de Integer");
+                    msg("attribute.bound.intRange", boundName, attributeName));
         } else if (type == TypeEnum.LONG) {
             Assert.isTrue(bound.stripTrailingZeros().scale() <= 0,
-                    "El valor " + boundName + " del atributo '" + attributeName + "' debe ser un número entero");
+                    msg("attribute.bound.integer", boundName, attributeName));
             Assert.isTrue(bound.compareTo(BigDecimal.valueOf(Long.MIN_VALUE)) >= 0
                             && bound.compareTo(BigDecimal.valueOf(Long.MAX_VALUE)) <= 0,
-                    "El valor " + boundName + " del atributo '" + attributeName + "' está fuera del rango de Long");
+                    msg("attribute.bound.longRange", boundName, attributeName));
         }
     }
 
@@ -1587,8 +1620,8 @@ public class DomainService {
                 String targetTable = StringUtils.transformToSnakeCase(value.getCustomType());
                 String joinTableName = manyToManyJoinTable(owner.getEntityName(), entry.getKey());
                 if (!tableNames.add(joinTableName)) {
-                    throw new IllegalArgumentException("La relación '" + entry.getKey() + "' de la entidad '"
-                            + owner.getEntityName() + "' genera la tabla duplicada '" + joinTableName + "'");
+                    throw new IllegalArgumentException(msg("schema.joinTable.duplicate",
+                            entry.getKey(), owner.getEntityName(), joinTableName));
                 }
 
                 TableDefinition joinTable = new TableDefinition(joinTableName);
@@ -1611,8 +1644,8 @@ public class DomainService {
             Set<String> columnNames = new HashSet<>();
             for (ColumnDefinition column : table.columns) {
                 if (!columnNames.add(column.name)) {
-                    throw new IllegalArgumentException("El esquema generaría la columna duplicada '" + column.name
-                            + "' en la tabla '" + table.name + "'. Renombrá el atributo o la relación que la genera");
+                    throw new IllegalArgumentException(msg("schema.column.duplicate",
+                            column.name, table.name));
                 }
             }
         }
@@ -1749,7 +1782,7 @@ public class DomainService {
                     case SQLITE -> "TEXT";
                     default -> "UUID";
                 };
-                default -> throw new IllegalArgumentException("Tipo no soportado en SQL: " + type);
+                default -> throw new IllegalArgumentException(msg("schema.type.unsupported", type));
             };
         }
 
@@ -1760,7 +1793,7 @@ public class DomainService {
                 case POSTGRESQL -> POSTGRESQL;
                 case H2 -> H2;
                 case SQLITE -> SQLITE;
-                case MONGODB -> throw new IllegalArgumentException("MongoDB no usa un esquema SQL");
+                case MONGODB -> throw new IllegalArgumentException(msg("schema.mongoUnsupported"));
             };
         }
     }
@@ -1918,7 +1951,7 @@ public class DomainService {
             case DATE -> "java.time.LocalDate.now()";
             case DATETIME -> "java.time.LocalDateTime.now()";
             case TIME -> "java.time.LocalTime.now()";
-            default -> throw new IllegalArgumentException("Validación temporal no soportada para el tipo " + type);
+            default -> throw new IllegalArgumentException(msg("validation.temporalUnsupported", type));
         };
         String condition = getter + "." + method + "(" + now + ")";
         if (negate) {
@@ -1947,7 +1980,7 @@ public class DomainService {
             case INTEGER -> String.valueOf(safeValue.intValueExact());
             case LONG -> safeValue.longValueExact() + "L";
             case DOUBLE -> safeValue.toPlainString();
-            default -> throw new IllegalArgumentException("Tipo numérico no soportado: " + type);
+            default -> throw new IllegalArgumentException(msg("validation.numericUnsupported", type));
         };
     }
 
